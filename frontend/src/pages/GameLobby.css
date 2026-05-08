@@ -11,6 +11,74 @@
   align-items: center;
 }
 
+/* ── Game type selector ── */
+.lobby-game-type-selector {
+  display: flex;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.lobby-type-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-4) var(--space-6);
+  background: var(--color-bg-card);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  min-width: 120px;
+}
+
+.lobby-type-btn:hover {
+  border-color: var(--color-accent);
+}
+
+.lobby-type-btn.active {
+  border-color: var(--color-accent);
+  background: var(--color-accent-subtle);
+  box-shadow: 0 0 20px var(--color-accent-glow);
+}
+
+.lobby-type-icon {
+  font-size: 2rem;
+}
+
+.lobby-type-name {
+  font-weight: 700;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.lobby-type-players {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* ── Player count slider ── */
+.lobby-player-count {
+  margin-bottom: var(--space-5);
+  max-width: 320px;
+}
+
+.lobby-slider {
+  width: 100%;
+  accent-color: var(--color-accent);
+  margin-top: var(--space-2);
+}
+
+.lobby-slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  padding: 0 2px;
+}
+
+/* ── Create buttons ── */
 .lobby-create-buttons {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -43,7 +111,7 @@
   margin-top: 2px;
 }
 
-/* HuggingFace ChessBot AI button */
+/* HuggingFace AI button */
 .lobby-btn-hf {
   background: linear-gradient(135deg, #ff9d00 0%, #ff6b00 100%);
   color: #fff;
@@ -56,6 +124,18 @@
   box-shadow: 0 8px 24px rgba(255, 107, 0, 0.3);
 }
 
+.lobby-btn-hf-sm {
+  background: linear-gradient(135deg, #ff9d00 0%, #ff6b00 100%);
+  color: #fff;
+  border: none;
+  font-weight: 600;
+}
+
+.lobby-btn-hf-sm:hover {
+  background: linear-gradient(135deg, #ffb033 0%, #ff8533 100%);
+}
+
+/* ── Open games ── */
 .lobby-open-section {
   margin-top: var(--space-8);
 }
@@ -71,6 +151,8 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--space-4) var(--space-5);
+  flex-wrap: wrap;
+  gap: var(--space-3);
 }
 
 .lobby-game-info {
@@ -88,6 +170,12 @@
 .lobby-game-creator {
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
+}
+
+.lobby-game-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
 }
 
 .lobby-empty {

@@ -1,7 +1,9 @@
 """
 Games router — REST endpoints for game CRUD + WebSocket for live play.
+Supports both 2-player chess and 3-7-player poker.
 """
 
+import asyncio
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
@@ -14,6 +16,7 @@ from app.schemas.game import (
     CreateGameRequest,
     GameResponse,
     GameStateResponse,
+    JoinAiRequest,
     OpenGameResponse,
     PlayerInfo,
 )
@@ -34,6 +37,7 @@ def _session_to_response(session) -> GameResponse:
         players=[
             PlayerInfo(**p.to_dict()) for p in session.players.values()
         ],
+        max_seats=session.max_seats,
         created_at=session.created_at,
     )
 
@@ -44,8 +48,10 @@ def _build_state_response(session, seat: int) -> dict:
     return {
         "type": "game_state",
         "game_id": str(session.match_id),
+        "game_type": session.game_type,
         "status": session.status,
         "your_seat": seat,
+        "max_seats": session.max_seats,
         "players": [p.model_dump(mode="json") for p in players],
         **view,
     }
@@ -60,7 +66,8 @@ async def create_game(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a new game. Set vs_ai=true and choose bot_type ('random' or 'chessbot')."""
+    """Create a new game. Set vs_ai=true and choose bot_type.
+    For poker, set max_players (3-7)."""
     session = await game_manager.create_game(
         db=db,
         game_type=body.game_type,
@@ -69,13 +76,14 @@ async def create_game(
         creator_elo=user.elo_rating,
         vs_ai=body.vs_ai,
         bot_type=body.bot_type,
+        max_players=body.max_players,
     )
     return _session_to_response(session)
 
 
 @router.get("/open", response_model=OpenGameResponse)
 async def list_open_games(user: User = Depends(get_current_user)):
-    """List games waiting for a second player."""
+    """List games waiting for players."""
     sessions = game_manager.get_open_games()
     return OpenGameResponse(
         games=[_session_to_response(s) for s in sessions]
@@ -100,7 +108,7 @@ async def join_game(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Join an open game as the second player."""
+    """Join an open game as a human player."""
     try:
         session = await game_manager.join_game(
             db=db,
@@ -112,9 +120,43 @@ async def join_game(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    # Notify player 1 that someone joined
-    state_msg = _build_state_response(session, seat=1)
-    await ws_manager.send_to_player(game_id, 1, state_msg)
+    # Notify all connected players that someone joined
+    for s in session.players:
+        msg = _build_state_response(session, s)
+        await ws_manager.send_to_player(game_id, s, msg)
+
+    return _session_to_response(session)
+
+
+@router.post("/{game_id}/join_ai", response_model=GameResponse)
+async def join_ai(
+    game_id: uuid.UUID,
+    body: JoinAiRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Add an AI bot to an open game. Only a player already in the lobby can do this."""
+    seat = game_manager.get_player_seat(game_id, user.id)
+    if seat is None:
+        raise HTTPException(status_code=403, detail="You are not in this game")
+
+    try:
+        session = await game_manager.join_ai(
+            db=db,
+            match_id=game_id,
+            bot_type=body.bot_type,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Notify all connected players
+    for s in session.players:
+        msg = _build_state_response(session, s)
+        await ws_manager.send_to_player(game_id, s, msg)
+
+    # If game just became active and AI goes first, trigger AI moves
+    if session.status == "active":
+        asyncio.create_task(_run_ai_loop(game_id))
 
     return _session_to_response(session)
 
@@ -192,6 +234,13 @@ async def game_websocket(websocket: WebSocket, game_id: uuid.UUID):
     state_msg = _build_state_response(session, seat)
     await websocket.send_json(state_msg)
 
+    # If it's an AI's turn, kick off the AI loop
+    if session.status == "active":
+        current = session.engine.get_current_turn(session.state)
+        ai_player = session.players.get(current)
+        if ai_player and ai_player.is_ai:
+            asyncio.create_task(_run_ai_loop(game_id))
+
     # ── Message loop ──
     try:
         while True:
@@ -218,13 +267,13 @@ async def game_websocket(websocket: WebSocket, game_id: uuid.UUID):
         ws_manager.disconnect_player(game_id, seat)
 
 
-async def _handle_move(ws: WebSocket, game_id: uuid.UUID, seat: int, move_uci: str):
+async def _handle_move(ws: WebSocket, game_id: uuid.UUID, seat: int, move_str: str):
     """Process a move from a WebSocket client."""
     from app.database import async_session
 
     async with async_session() as db:
         try:
-            session, move_info = await game_manager.make_move(db, game_id, seat, move_uci)
+            session, move_info = await game_manager.make_move(db, game_id, seat, move_str)
             await db.commit()
         except ValueError as e:
             await ws.send_json({"type": "error", "message": str(e)})
@@ -235,16 +284,10 @@ async def _handle_move(ws: WebSocket, game_id: uuid.UUID, seat: int, move_uci: s
             msg = _build_state_response(session, s)
             await ws_manager.send_to_player(game_id, s, msg)
 
-        # If vs AI and it's the bot's turn, make the AI move
-        if session.status == "active":
-            async with async_session() as db2:
-                ai_result = await game_manager.make_ai_move(db2, game_id)
-                if ai_result:
-                    await db2.commit()
-                    session, _ = ai_result
-                    for s in session.players:
-                        msg = _build_state_response(session, s)
-                        await ws_manager.send_to_player(game_id, s, msg)
+    # If the game is still active, run AI moves in a loop
+    # (multiple AIs may need to act in sequence)
+    if session.status == "active":
+        await _run_ai_loop(game_id)
 
 
 async def _handle_resign(ws: WebSocket, game_id: uuid.UUID, seat: int):
@@ -262,3 +305,32 @@ async def _handle_resign(ws: WebSocket, game_id: uuid.UUID, seat: int):
         for s in session.players:
             msg = _build_state_response(session, s)
             await ws_manager.send_to_player(game_id, s, msg)
+
+
+async def _run_ai_loop(game_id: uuid.UUID):
+    """
+    Keep making AI moves as long as it's an AI's turn.
+    This handles multi-bot poker tables where several AIs act in sequence.
+    """
+    from app.database import async_session
+
+    max_iterations = 50  # safety valve
+    for _ in range(max_iterations):
+        session = game_manager.get_session(game_id)
+        if not session or session.status != "active":
+            break
+
+        async with async_session() as db:
+            ai_result = await game_manager.make_ai_move(db, game_id)
+            if not ai_result:
+                break  # not AI's turn
+            await db.commit()
+            session, _ = ai_result
+
+            # Broadcast to all
+            for s in session.players:
+                msg = _build_state_response(session, s)
+                await ws_manager.send_to_player(game_id, s, msg)
+
+        if session.status != "active":
+            break

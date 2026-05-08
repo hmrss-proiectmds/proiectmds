@@ -15,11 +15,16 @@ from pydantic import BaseModel, Field
 class CreateGameRequest(BaseModel):
     game_type: str = "chess"
     vs_ai: bool = False
-    bot_type: str = Field("random", description="Bot type: 'random' or 'chessbot'")
+    bot_type: str = Field("random", description="Bot type: 'random', 'chessbot', or 'pokerbot'")
+    max_players: int = Field(2, ge=2, le=7, description="Number of seats (3-7 for poker, always 2 for chess)")
+
+
+class JoinAiRequest(BaseModel):
+    bot_type: str = Field("random", description="Bot type: 'random' or 'pokerbot'")
 
 
 class MakeMoveRequest(BaseModel):
-    move: str = Field(..., description="Move in UCI notation, e.g. 'e2e4'")
+    move: str = Field(..., description="Move in UCI notation (chess) or action string (poker)")
 
 
 # ── Responses ──
@@ -38,6 +43,7 @@ class GameResponse(BaseModel):
     game_type: str
     status: str
     players: list[PlayerInfo]
+    max_seats: int = 2
     created_at: Optional[datetime] = None
 
 

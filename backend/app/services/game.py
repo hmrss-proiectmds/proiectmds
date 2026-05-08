@@ -1,6 +1,7 @@
 """
 Game manager — in-memory active game session tracking.
 Handles creation, joining, move execution, and AI bot responses.
+Supports both 2-player (chess) and 3-7-player (poker) games.
 """
 
 from __future__ import annotations
@@ -40,10 +41,12 @@ class PlayerSlot:
 # Bot type constants
 BOT_RANDOM = "random"
 BOT_CHESSBOT = "chessbot"
+BOT_POKERBOT = "pokerbot"
 
 BOT_INFO = {
     BOT_RANDOM: {"name": "Random Bot 🎲", "elo": 400},
     BOT_CHESSBOT: {"name": "ChessBot AI 🧠", "elo": 1500},
+    BOT_POKERBOT: {"name": "PokerBot AI 🤖", "elo": 1200},
 }
 
 
@@ -57,7 +60,19 @@ class GameSession:
     status: str = "waiting"  # waiting | active | finished
     result: Optional[dict] = None
     bot_type: Optional[str] = None
+    max_seats: int = 2        # how many seats the creator configured
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+    @property
+    def is_full(self) -> bool:
+        return len(self.players) >= self.max_seats
+
+    def next_free_seat(self) -> Optional[int]:
+        """Return the next available seat number (1-indexed), or None."""
+        for s in range(1, self.max_seats + 1):
+            if s not in self.players:
+                return s
+        return None
 
 
 class GameManager:
@@ -77,9 +92,22 @@ class GameManager:
         creator_elo: int,
         vs_ai: bool = False,
         bot_type: str = BOT_RANDOM,
+        max_players: int = 2,
     ) -> GameSession:
         engine = get_engine(game_type)
-        state = engine.create_initial_state()
+
+        # For poker, enforce 3-7 players; for chess, always 2
+        if game_type == "poker":
+            max_seats = max(3, min(7, max_players))
+        else:
+            max_seats = 2
+
+        # Create initial state — poker engine accepts num_players kwarg
+        if game_type == "poker":
+            state = engine.create_initial_state(num_players=max_seats)
+        else:
+            state = engine.create_initial_state()
+
         match_id = uuid.uuid4()
 
         creator = PlayerSlot(
@@ -95,18 +123,21 @@ class GameManager:
             engine=engine,
             state=state,
             players={1: creator},
+            max_seats=max_seats,
         )
 
         if vs_ai:
+            # Fill all remaining seats with AI bots
             info = BOT_INFO.get(bot_type, BOT_INFO[BOT_RANDOM])
-            ai = PlayerSlot(
-                user_id=None,
-                username=info["name"],
-                elo_rating=info["elo"],
-                seat=2,
-                is_ai=True,
-            )
-            session.players[2] = ai
+            for seat in range(2, max_seats + 1):
+                ai = PlayerSlot(
+                    user_id=None,
+                    username=f"{info['name']} #{seat - 1}",
+                    elo_rating=info["elo"],
+                    seat=seat,
+                    is_ai=True,
+                )
+                session.players[seat] = ai
             session.bot_type = bot_type
             session.status = "active"
 
@@ -128,11 +159,12 @@ class GameManager:
         ))
 
         if vs_ai:
-            db.add(MatchParticipant(
-                match_id=match_id,
-                seat=2,
-                elo_before=800,
-            ))
+            for seat in range(2, max_seats + 1):
+                db.add(MatchParticipant(
+                    match_id=match_id,
+                    seat=seat,
+                    elo_before=800,
+                ))
 
         await db.flush()
         return session
@@ -152,23 +184,72 @@ class GameManager:
             raise ValueError("Game not found")
         if session.status != "waiting":
             raise ValueError("Game is not open for joining")
-        if any(p.user_id == player_id for p in session.players.values()):
+        if any(p.user_id == player_id for p in session.players.values() if p.user_id):
             raise ValueError("You are already in this game")
+
+        seat = session.next_free_seat()
+        if seat is None:
+            raise ValueError("Game is full")
 
         joiner = PlayerSlot(
             user_id=player_id,
             username=player_username,
             elo_rating=player_elo,
-            seat=2,
+            seat=seat,
         )
-        session.players[2] = joiner
-        session.status = "active"
+        session.players[seat] = joiner
+
+        # If all seats are filled, start the game
+        if session.is_full:
+            session.status = "active"
 
         db.add(MatchParticipant(
             match_id=match_id,
             player_id=player_id,
-            seat=2,
+            seat=seat,
             elo_before=player_elo,
+        ))
+        await db.flush()
+        return session
+
+    async def join_ai(
+        self,
+        db: AsyncSession,
+        match_id: uuid.UUID,
+        bot_type: str = BOT_RANDOM,
+    ) -> GameSession:
+        """Add an AI player to an open game."""
+        session = self.sessions.get(match_id)
+        if not session:
+            raise ValueError("Game not found")
+        if session.status != "waiting":
+            raise ValueError("Game is not open for joining")
+
+        seat = session.next_free_seat()
+        if seat is None:
+            raise ValueError("Game is full")
+
+        info = BOT_INFO.get(bot_type, BOT_INFO[BOT_RANDOM])
+        ai_count = sum(1 for p in session.players.values() if p.is_ai)
+
+        ai = PlayerSlot(
+            user_id=None,
+            username=f"{info['name']} #{ai_count + 1}",
+            elo_rating=info["elo"],
+            seat=seat,
+            is_ai=True,
+        )
+        session.players[seat] = ai
+        session.bot_type = session.bot_type or bot_type  # keep first bot_type
+
+        # If all seats are filled, start the game
+        if session.is_full:
+            session.status = "active"
+
+        db.add(MatchParticipant(
+            match_id=match_id,
+            seat=seat,
+            elo_before=info["elo"],
         ))
         await db.flush()
         return session
@@ -180,7 +261,7 @@ class GameManager:
         db: AsyncSession,
         match_id: uuid.UUID,
         seat: int,
-        move_uci: str,
+        move_str: str,
     ) -> tuple[GameSession, dict]:
         session = self.sessions.get(match_id)
         if not session:
@@ -192,19 +273,24 @@ class GameManager:
         if current_turn != seat:
             raise ValueError("Not your turn")
 
-        if not session.engine.validate_move(session.state, move_uci):
+        if not session.engine.validate_move(session.state, move_str):
             raise ValueError("Invalid move")
 
         # Apply move
-        new_state = session.engine.apply_move(session.state, move_uci)
+        new_state = session.engine.apply_move(session.state, move_str)
         san = session.engine.get_last_move_san(new_state)
         session.state = new_state
 
+        # Build move_info (generic — works for both chess and poker)
+        turn_num = getattr(new_state, '_turn_number', 0)
+        if not turn_num and hasattr(new_state, '_move_stack_san'):
+            turn_num = len(new_state._move_stack_san)
+
         move_info = {
-            "turn": len(new_state._move_stack_san),
+            "turn": turn_num,
             "seat": seat,
-            "uci": move_uci,
-            "san": san or move_uci,
+            "move": move_str,
+            "san": san or move_str,
         }
 
         # Persist move
@@ -212,7 +298,7 @@ class GameManager:
             match_id=match_id,
             turn_number=move_info["turn"],
             seat=seat,
-            move_payload={"uci": move_uci, "san": san},
+            move_payload={"move": move_str, "san": san},
         ))
 
         # Check terminal
@@ -241,17 +327,21 @@ class GameManager:
             return None
 
         # Small delay to feel natural
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.4)
 
+        # Pick a move based on bot type
         if session.bot_type == BOT_CHESSBOT:
             from app.games.bots.hf_chessbot import pick_hf_move
-            move_uci = pick_hf_move(session.engine, session.state, temperature=0.3)
+            move = pick_hf_move(session.engine, session.state, temperature=0.3)
+        elif session.bot_type == BOT_POKERBOT:
+            from app.games.bots.hf_pokerbot import pick_hf_poker_move
+            move = pick_hf_poker_move(session.engine, session.state)
         else:
-            move_uci = pick_random_move(session.engine, session.state)
+            move = pick_random_move(session.engine, session.state)
 
-        return await self.make_move(db, match_id, current_turn, move_uci)
+        return await self.make_move(db, match_id, current_turn, move)
 
-    # ── Resign ──
+    # ── Resign / Fold-out ──
 
     async def resign(
         self, db: AsyncSession, match_id: uuid.UUID, seat: int
@@ -260,8 +350,15 @@ class GameManager:
         if not session or session.status != "active":
             raise ValueError("Game not active")
 
-        winner = 2 if seat == 1 else 1
-        result_key = "player1_win" if winner == 1 else "player2_win"
+        # For 2-player: the other player wins
+        # For multiplayer: just mark as finished (simplification)
+        other_seats = [s for s in session.players if s != seat]
+        if len(other_seats) == 1:
+            winner = other_seats[0]
+        else:
+            winner = other_seats[0]  # first remaining player
+
+        result_key = f"player{winner}_win"
         terminal = {"result": result_key, "reason": "resignation"}
         session.status = "finished"
         session.result = terminal
