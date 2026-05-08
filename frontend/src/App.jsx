@@ -5,6 +5,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import GameLobby from './pages/GameLobby';
+import GameBoard from './pages/GameBoard';
 import Leaderboard from './pages/Leaderboard';
 import MatchHistory from './pages/MatchHistory';
 import './index.css';
@@ -33,6 +35,8 @@ function AppLayout() {
 
         {/* Protected routes */}
         <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/play" element={<ProtectedRoute><GameLobby /></ProtectedRoute>} />
+        <Route path="/game/:gameId" element={<ProtectedRoute><GameBoard /></ProtectedRoute>} />
         <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
         <Route path="/history" element={<ProtectedRoute><MatchHistory /></ProtectedRoute>} />
 

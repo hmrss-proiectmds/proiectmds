@@ -60,6 +60,11 @@
   background: var(--color-bg-glass);
 }
 
+.nav-link-play {
+  color: var(--color-success);
+  font-weight: 600;
+}
+
 .nav-link-admin {
   color: var(--color-warning);
 }

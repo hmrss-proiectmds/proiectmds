@@ -3,7 +3,7 @@
  * All backend calls go through this module.
  */
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = '';
 
 function getToken() {
   return localStorage.getItem('access_token');

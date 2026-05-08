@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, Enum, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
@@ -42,3 +42,6 @@ class User(Base):
         nullable=False,
         default=lambda: datetime.now(timezone.utc),
     )
+
+    # Relationships
+    agents = relationship("Agent", back_populates="owner")

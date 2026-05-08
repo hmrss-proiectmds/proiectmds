@@ -29,6 +29,7 @@ export default function Navbar() {
         {user ? (
           <div className="navbar-links">
             <Link to="/" className="nav-link">Dashboard</Link>
+            <Link to="/play" className="nav-link nav-link-play">▶ Play</Link>
             <Link to="/leaderboard" className="nav-link">Leaderboard</Link>
             <Link to="/history" className="nav-link">History</Link>
             {(user.role === 'admin') && (

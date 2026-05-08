@@ -15,7 +15,14 @@ from app.config import settings
 from app.database import Base
 
 # Import all models so they register with Base.metadata
-from app.models.user import User  # noqa: F401
+from app.models import (  # noqa: F401
+    User,
+    Agent,
+    Match,
+    MatchParticipant,
+    MatchMove,
+    DecisionLog,
+)
 
 # Alembic Config object
 config = context.config

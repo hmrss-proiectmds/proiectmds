@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import './Dashboard.css';
 
@@ -6,7 +7,7 @@ const roleConfigs = {
     icon: '👤',
     title: 'Player Dashboard',
     cards: [
-      { icon: '⚔️', title: 'Play a Game', desc: 'Challenge AI opponents or other players', link: '/play', tag: 'Coming soon' },
+      { icon: '⚔️', title: 'Play a Game', desc: 'Challenge AI opponents or other players', link: '/play', tag: 'Available' },
       { icon: '👁️', title: 'Spectate', desc: 'Watch live AI vs AI matches', link: '/spectate', tag: 'Coming soon' },
       { icon: '🏆', title: 'Leaderboard', desc: 'See global ELO rankings', link: '/leaderboard', tag: 'Available' },
       { icon: '📊', title: 'Match History', desc: 'Review your past games', link: '/history', tag: 'Available' },
@@ -46,6 +47,7 @@ const roleConfigs = {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const config = roleConfigs[user.role] || roleConfigs.human_player;
 
   return (
@@ -69,6 +71,7 @@ export default function Dashboard() {
             key={i}
             className="card card-hover dashboard-card"
             style={{ animationDelay: `${i * 80}ms` }}
+            onClick={() => card.tag === 'Available' && navigate(card.link)}
           >
             <span className="dashboard-card-icon">{card.icon}</span>
             <h3 className="dashboard-card-title">{card.title}</h3>

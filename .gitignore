@@ -25,3 +25,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# ML models (downloaded from HuggingFace)
+backend/models/

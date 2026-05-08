@@ -404,18 +404,38 @@ proiectmds/
 
 ## Phased Delivery Roadmap
 
-### Phase 1 — Foundation (Sprint 1)
-- [ ] Project scaffolding: Docker Compose, FastAPI skeleton, React+Vite skeleton
-- [ ] Auth system (JWT registration/login, role middleware)
-- [ ] PostgreSQL schema + Alembic migrations
-- [ ] Basic frontend: Login, Register, Dashboard shell, Navbar
+### Phase 1 — Foundation (Sprint 1) ✅
+- [x] Project scaffolding: Docker Compose, FastAPI skeleton, React+Vite skeleton
+- [x] Auth system (JWT registration/login, role middleware)
+- [x] PostgreSQL schema + Alembic migrations (all 6 tables: users, agents, matches, match_participants, match_moves, decision_logs)
+- [x] Basic frontend: Login, Register, Dashboard shell, Navbar
+- [x] One-command startup scripts (`start.ps1` / `start.sh`)
+- [x] Vite dev proxy for `/api/*` routes
 
-### Phase 2 — Core Gameplay (Sprint 2)
-- [ ] Game engine plugin architecture + Chess implementation (`python-chess`)
-- [ ] WebSocket connection manager + Redis pub/sub
-- [ ] Human vs. built-in AI (random/minimax) — full play loop (US 1)
-- [ ] Game board rendering on frontend (ChessBoard component)
-- [ ] Match persistence (match_moves table for replay)
+### Phase 2 — Core Gameplay (Sprint 2) ✅
+- [x] Game engine plugin architecture (`app/games/base.py` → abstract `GameEngine` + `GameState`)
+- [x] Chess implementation using `python-chess` (`app/games/chess/engine.py`)
+- [x] Game type registry with dynamic engine lookup (`app/games/registry.py`)
+- [x] WebSocket connection manager (`app/websocket/manager.py`) — in-memory for now, Redis pub/sub in Phase 3
+- [x] Random-move built-in AI bot (`app/games/bots/random_bot.py`)
+- [x] Human vs. Random Bot — full play loop via WebSocket (US 1)
+- [x] Human vs. Human — create game, share link, join, play via WebSocket
+- [x] Game Lobby page — create games (vs Human / vs AI), browse & join open games
+- [x] ChessBoard component — click-to-move, legal move dots, last-move highlighting, check glow, coordinate labels, board flipping
+- [x] GameBoard page — player info bars, turn status indicator, move history panel, resign button
+- [x] Match persistence — Match + MatchParticipant + MatchMove records saved to PostgreSQL
+- [x] REST API: `POST /api/games`, `GET /api/games/open`, `GET /api/games/{id}`, `POST /api/games/{id}/join`, `POST /api/games/{id}/resign`
+- [x] WebSocket API: `/api/games/ws/{id}?token=...` — send moves, receive real-time state updates
+
+### Phase 2.5 — HuggingFace AI Integration ✅
+- [x] Downloaded `Maxlegrec/ChessBot` model (~140MB) to `backend/models/chessbot/`
+- [x] Patched model for `transformers` 5.x compatibility (`all_tied_weights_keys`)
+- [x] Created `app/games/bots/hf_chessbot.py` — lazy-loads model, picks moves via policy head with temperature control
+- [x] Bot type system: `GameSession.bot_type` routes to correct move-picker (`random` or `chessbot`)
+- [x] API updated: `POST /api/games` accepts `bot_type` field (`"random"` or `"chessbot"`)
+- [x] Game Lobby: 3 options — Play vs Human / Play vs Random Bot (🎲 400 ELO) / Play vs ChessBot AI (🧠 1500 ELO)
+- [x] `download_model.py` script for easy model setup
+- [x] `.gitignore` excludes `backend/models/` from version control
 
 ### Phase 3 — AI Integration & Social (Sprint 3)
 - [ ] Agent registration + webhook integration (US 5, US 8, US 9)

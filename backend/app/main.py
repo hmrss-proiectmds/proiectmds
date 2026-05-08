@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import auth
+from app.routers import auth, games, users
 
 
 def create_app() -> FastAPI:
@@ -29,6 +29,8 @@ def create_app() -> FastAPI:
 
     # ── Routers ──
     app.include_router(auth.router)
+    app.include_router(users.router)
+    app.include_router(games.router)
 
     # ── Health check ──
     @app.get("/health", tags=["system"])
@@ -39,3 +41,4 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
+

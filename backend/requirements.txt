@@ -23,3 +23,8 @@ python-chess==1.999
 
 # ── HTTP client (for agent webhooks) ──
 httpx==0.28.1
+
+# ── AI / HuggingFace ──
+transformers>=4.48.0
+torch>=2.6.0
+huggingface-hub>=0.30.0
