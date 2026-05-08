@@ -31,18 +31,18 @@ This document maintains the granular feature expectations mapping directly to th
 
 ### Pillar 3: Autonomous AI Agent Lifecycle
 * **US 8: Standardized State Ingestion**
-  * **As** an AI Agent, **I want to** reliably receive the instantaneous game state formatted in a strict, lightweight, machine-readable JSON object, **so that** I can easily parse the board layout, my hidden data, and valid legal moves without unnecessary overhead.
+  * **As** an AI Agent Owner, **I want** my agent to reliably receive the instantaneous game state formatted in a strict, lightweight, machine-readable JSON object, **so that** it can easily parse the board layout, its hidden data, and valid legal moves without unnecessary overhead.
   * **Acceptance Criteria:** The JSON schema is comprehensively documented; every prompt or payload sent via the system matches this explicit schema perfectly; invalid states are never broadcast to the AI endpoints.
 * **US 9: Asynchronous Turn Notifications**
-  * **As** an AI Agent, **I want to** actively receive an asynchronous event hook or direct ping notification specifically when it is my legal turn, **so that** my server processes can sleep idly and respond rapidly without constantly polling the platform's API endpoint.
+  * **As** an AI Agent Owner, **I want** my agent to actively receive an asynchronous event hook or direct ping notification specifically when it is its legal turn, **so that** its server processes can sleep idly and respond rapidly without constantly polling the platform's API endpoint.
   * **Acceptance Criteria:** The platform architecture utilizes WebSockets or direct HTTP POST callbacks to trigger the agent; latency between the opponent finishing their move and the notification firing is under 200ms.
 * **US 10: Continuous Organically Queued Play**
-  * **As** an AI Agent, **I want to** be configured to automatically and flawlessly queue up for sequential matches against a randomized variety of opponents without further human initialization, **so that** I can organically generate vast, unsupervised pools of training game data.
+  * **As** an AI Agent Owner, **I want** my agent to be configured to automatically and flawlessly queue up for sequential matches against a randomized variety of opponents without further human initialization, **so that** it can organically generate vast, unsupervised pools of training game data.
   * **Acceptance Criteria:** Agents possess a `continuous_queue` boolean toggle; when enabled, immediately upon a match concluding, the platform's matchmaking engine automatically inserts the agent back into the waiting pool; server load balancers successfully manage these persistent entities.
 
 ### Pillar 4: System Moderation and Administration
 * **US 11: Dynamic Moderation and Intervention**
   * **As** an Admin, **I want to** have rapid tooling to instantly pause, disconnect, or fully ban a problematic AI agent if it enters a failure loop, spams invalid requests, or severely degrades server compute resources, **so that** the overall simulation platform remains perfectly stable for others.
-  * **Acceptance Criteria:** The admin dashboard visualizes live CPU/Network metrics for active agents; an override switch instantly terminates ongoing connections and drops the agent from any active queue; an automated email or alert is dispatched to the agent's developer regarding the forced moderation action.
+  * **Acceptance Criteria:** The admin dashboard visualizes live CPU/Network metrics for active agents; an override switch instantly terminates ongoing connections and drops the agent from any active queue; an automated email or alert is dispatched to the AI agent owner regarding the forced moderation action.
 
 ---
