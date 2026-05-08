@@ -156,11 +156,15 @@ async def game_websocket(websocket: WebSocket, game_id: uuid.UUID):
     # ── Auth from query param ──
     token = websocket.query_params.get("token")
     if not token:
+        await websocket.accept()
+        await websocket.send_json({"type": "error", "message": "Missing token"})
         await websocket.close(code=4001, reason="Missing token")
         return
 
     payload = decode_access_token(token)
     if not payload:
+        await websocket.accept()
+        await websocket.send_json({"type": "error", "message": "Invalid token"})
         await websocket.close(code=4001, reason="Invalid token")
         return
 
@@ -169,15 +173,19 @@ async def game_websocket(websocket: WebSocket, game_id: uuid.UUID):
     # ── Find session and seat ──
     session = game_manager.get_session(game_id)
     if not session:
+        await websocket.accept()
+        await websocket.send_json({"type": "error", "message": "Game not found"})
         await websocket.close(code=4004, reason="Game not found")
         return
 
     seat = game_manager.get_player_seat(game_id, user_id)
     if seat is None:
+        await websocket.accept()
+        await websocket.send_json({"type": "error", "message": "Not a participant"})
         await websocket.close(code=4003, reason="Not a participant")
         return
 
-    # ── Connect ──
+    # ── Connect (accept + register) ──
     await ws_manager.connect_player(game_id, seat, websocket)
 
     # Send initial state
@@ -203,6 +211,8 @@ async def game_websocket(websocket: WebSocket, game_id: uuid.UUID):
                 })
 
     except WebSocketDisconnect:
+        pass
+    except Exception:
         pass
     finally:
         ws_manager.disconnect_player(game_id, seat)

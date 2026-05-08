@@ -6,10 +6,17 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api': {
+      // WebSocket proxy — must be BEFORE the generic /api proxy
+      // so that /api/games/ws/* is matched first
+      '/api/games/ws': {
         target: 'http://localhost:8000',
         changeOrigin: true,
         ws: true,
+      },
+      // REST API proxy — no ws flag to avoid conflicts with Vite's HMR socket
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
       },
       '/health': {
         target: 'http://localhost:8000',
