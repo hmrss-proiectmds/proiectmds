@@ -17,7 +17,7 @@ const roleConfigs = {
     icon: '👨‍💻',
     title: 'Developer Dashboard',
     cards: [
-      { icon: '📤', title: 'Upload Agent', desc: 'Deploy a new AI agent to the platform', link: '/agents', tag: 'Coming soon' },
+      { icon: '📤', title: 'Upload Agent', desc: 'Deploy a new AI agent to the platform', link: '/agents', tag: 'Available' },
       { icon: '🧪', title: 'Bulk Simulations', desc: 'Run thousands of headless games', link: '/simulations', tag: 'Coming soon' },
       { icon: '🔍', title: 'Decision Logs', desc: 'Debug your agent\'s move decisions', link: '/logs', tag: 'Coming soon' },
       { icon: '🏆', title: 'Leaderboard', desc: 'Check your agent rankings', link: '/leaderboard', tag: 'Available' },
