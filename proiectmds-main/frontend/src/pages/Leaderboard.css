@@ -1,0 +1,125 @@
+/* ── Leaderboard page ── */
+
+.lb-loading {
+  display: flex;
+  justify-content: center;
+  padding: 3rem;
+}
+
+.lb-empty {
+  text-align: center;
+  padding: 3rem 2rem;
+}
+
+.lb-empty-icon {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.lb-table-wrapper {
+  overflow-x: auto;
+  padding: 0;
+}
+
+.lb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.lb-table thead {
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.lb-table th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+
+.lb-th-rank { width: 70px; text-align: center; }
+.lb-th-elo  { width: 100px; text-align: right; }
+
+.lb-row {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  transition: background var(--transition-fast);
+}
+
+.lb-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.lb-row td {
+  padding: 0.65rem 1rem;
+  vertical-align: middle;
+}
+
+/* Medal rows */
+.rank-gold {
+  background: linear-gradient(90deg, rgba(255, 215, 0, 0.06) 0%, transparent 60%);
+}
+.rank-silver {
+  background: linear-gradient(90deg, rgba(192, 192, 192, 0.05) 0%, transparent 60%);
+}
+.rank-bronze {
+  background: linear-gradient(90deg, rgba(205, 127, 50, 0.05) 0%, transparent 60%);
+}
+
+/* Current user row */
+.lb-row-you {
+  background: rgba(var(--accent-rgb, 99, 102, 241), 0.08) !important;
+  border-left: 3px solid var(--color-accent);
+}
+
+.lb-cell-rank {
+  text-align: center;
+}
+
+.lb-medal {
+  font-size: 1.3rem;
+}
+
+.lb-rank-num {
+  font-weight: 700;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+}
+
+.lb-cell-player {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.lb-username {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.lb-you-badge {
+  font-size: 0.6rem;
+  padding: 1px 6px;
+}
+
+.lb-role-badge {
+  font-size: var(--text-xs);
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lb-cell-elo {
+  text-align: right;
+}
+
+.lb-elo {
+  font-weight: 700;
+  font-size: var(--text-base);
+  color: var(--color-accent);
+}
