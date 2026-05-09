@@ -71,6 +71,10 @@ export default function GameBoard() {
     action_log = [],
     chips_to_call = 0,
     max_seats = 2,
+    hand_number = 1,
+    hand_phase = '',
+    hand_just_ended = false,
+    showdown_info = null,
   } = gameState;
 
   const isPoker = game_type === 'poker';
@@ -140,6 +144,10 @@ export default function GameBoard() {
               disabled={!isYourTurn || game_over || isWaiting}
               actionLog={action_log}
               chipsToCall={chips_to_call}
+              handNumber={hand_number}
+              handPhase={hand_phase}
+              handJustEnded={hand_just_ended}
+              showdownInfo={showdown_info}
             />
           ) : (
             <ChessBoard

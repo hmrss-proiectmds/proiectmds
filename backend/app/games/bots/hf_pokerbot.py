@@ -66,7 +66,7 @@ def pick_hf_poker_move(engine: GameEngine, state: GameState) -> str:
     # Build simple action names for matching
     simple_actions = []
     for m in legal_moves:
-        simple_actions.append(m.split()[0])  # FOLD, CHECK, CALL, ALL_IN, RAISE
+        simple_actions.append(m.split()[0])  # FOLD, CHECK, CALL, ALLIN, RAISE
 
     try:
         pipe = _get_pipeline()
@@ -92,8 +92,8 @@ def pick_hf_poker_move(engine: GameEngine, state: GameState) -> str:
         generated = output[0]["generated_text"][len(prompt):].strip().upper()
 
         # Try to match the generated text to a valid action
-        for action_name in ["FOLD", "CHECK", "CALL", "ALL_IN", "RAISE"]:
-            if action_name in generated:
+        for action_name in ["FOLD", "CHECK", "CALL", "ALLIN", "RAISE"]:
+            if action_name in generated or (action_name == "ALLIN" and "ALL" in generated and "IN" in generated):
                 if action_name in simple_actions:
                     if action_name == "RAISE":
                         rng = _parse_raise_range(legal_moves)
@@ -112,7 +112,7 @@ def pick_hf_poker_move(engine: GameEngine, state: GameState) -> str:
         "CALL": 4,
         "RAISE": 2,
         "FOLD": 1,
-        "ALL_IN": 1,
+        "ALLIN": 1,
     }
     available = [a for a in simple_actions if a in weights]
     if not available:

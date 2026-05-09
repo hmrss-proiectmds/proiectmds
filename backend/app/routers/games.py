@@ -57,6 +57,38 @@ def _build_state_response(session, seat: int) -> dict:
     }
 
 
+def _build_spectator_response(session) -> dict:
+    """Build a sanitized spectator view — no hidden cards."""
+    # Use seat 0 (nonexistent) to get a generic view, or seat 1 for board info
+    view = session.engine.get_player_view(session.state, 1)
+    players = [PlayerInfo(**p.to_dict()) for p in session.players.values()]
+    # Remove private info
+    view.pop("your_hand", None)
+    view.pop("your_chips", None)
+    view["legal_moves"] = []
+    return {
+        "type": "game_state",
+        "game_id": str(session.match_id),
+        "game_type": session.game_type,
+        "status": session.status,
+        "your_seat": 0,  # spectator
+        "max_seats": session.max_seats,
+        "players": [p.model_dump(mode="json") for p in players],
+        **view,
+    }
+
+
+async def _broadcast_spectators(game_id: uuid.UUID, session):
+    """Send state to all spectators."""
+    msg = _build_spectator_response(session)
+    specs = list(ws_manager.spectators.get(game_id, []))
+    for ws in specs:
+        try:
+            await ws.send_json(msg)
+        except Exception:
+            ws_manager.disconnect_spectator(game_id, ws)
+
+
 # ── REST Endpoints ──
 
 
@@ -85,6 +117,16 @@ async def create_game(
 async def list_open_games(user: User = Depends(get_current_user)):
     """List games waiting for players."""
     sessions = game_manager.get_open_games()
+    return OpenGameResponse(
+        games=[_session_to_response(s) for s in sessions]
+    )
+
+
+@router.get("/active", response_model=OpenGameResponse)
+async def list_active_games():
+    """List all active (in-progress) games — for the spectate page.
+    No auth required."""
+    sessions = [s for s in game_manager.sessions.values() if s.status == "active"]
     return OpenGameResponse(
         games=[_session_to_response(s) for s in sessions]
     )
@@ -267,6 +309,37 @@ async def game_websocket(websocket: WebSocket, game_id: uuid.UUID):
         ws_manager.disconnect_player(game_id, seat)
 
 
+@router.websocket("/ws/{game_id}/spectate")
+async def spectate_websocket(websocket: WebSocket, game_id: uuid.UUID):
+    """
+    Spectator WebSocket — read-only, no auth required.
+    Receives game state updates but cannot send moves.
+    """
+    session = game_manager.get_session(game_id)
+    if not session:
+        await websocket.accept()
+        await websocket.send_json({"type": "error", "message": "Game not found"})
+        await websocket.close(code=4004, reason="Game not found")
+        return
+
+    await ws_manager.connect_spectator(game_id, websocket)
+
+    # Send initial state
+    state_msg = _build_spectator_response(session)
+    await websocket.send_json(state_msg)
+
+    try:
+        while True:
+            # Spectators can only receive, but we must read to detect disconnect
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        pass
+    except Exception:
+        pass
+    finally:
+        ws_manager.disconnect_spectator(game_id, websocket)
+
+
 async def _handle_move(ws: WebSocket, game_id: uuid.UUID, seat: int, move_str: str):
     """Process a move from a WebSocket client."""
     from app.database import async_session
@@ -279,14 +352,49 @@ async def _handle_move(ws: WebSocket, game_id: uuid.UUID, seat: int, move_str: s
             await ws.send_json({"type": "error", "message": str(e)})
             return
 
-        # Send updated state to all players
+        # Send updated state to all players and spectators
         for s in session.players:
             msg = _build_state_response(session, s)
             await ws_manager.send_to_player(game_id, s, msg)
+        await _broadcast_spectators(game_id, session)
 
-    # If the game is still active, run AI moves in a loop
-    # (multiple AIs may need to act in sequence)
+    # If the game is still active, handle hand transition or AI moves
     if session.status == "active":
+        # Check if the hand just ended (human made the final move)
+        if hasattr(session.engine, "needs_new_hand") and session.engine.needs_new_hand(session.state):
+            # Broadcast showdown state
+            for s in session.players:
+                msg = _build_state_response(session, s)
+                await ws_manager.send_to_player(game_id, s, msg)
+            await _broadcast_spectators(game_id, session)
+
+            # Pause so players can see the hand results
+            await asyncio.sleep(5.0)
+
+            # Start next hand
+            session.state = session.engine.start_next_hand(session.state)
+
+            # Check if the game just ended (e.g. all but one player busted)
+            async with async_session() as db:
+                game_ended = await game_manager.check_and_finalize(db, game_id)
+                if game_ended:
+                    await db.commit()
+                    # Broadcast final game-over state
+                    for s in session.players:
+                        msg = _build_state_response(session, s)
+                        await ws_manager.send_to_player(game_id, s, msg)
+                    await _broadcast_spectators(game_id, session)
+                    return
+
+            # Broadcast the fresh new-hand state
+            for s in session.players:
+                msg = _build_state_response(session, s)
+                await ws_manager.send_to_player(game_id, s, msg)
+            await _broadcast_spectators(game_id, session)
+
+            await asyncio.sleep(0.5)
+
+        # Continue with AI loop if it's an AI's turn
         await _run_ai_loop(game_id)
 
 
@@ -305,20 +413,57 @@ async def _handle_resign(ws: WebSocket, game_id: uuid.UUID, seat: int):
         for s in session.players:
             msg = _build_state_response(session, s)
             await ws_manager.send_to_player(game_id, s, msg)
+        await _broadcast_spectators(game_id, session)
 
 
 async def _run_ai_loop(game_id: uuid.UUID):
     """
     Keep making AI moves as long as it's an AI's turn.
-    This handles multi-bot poker tables where several AIs act in sequence.
+    Handles multi-bot poker tables and hand transitions with pauses.
     """
     from app.database import async_session
 
-    max_iterations = 50  # safety valve
+    max_iterations = 100  # safety valve
     for _ in range(max_iterations):
         session = game_manager.get_session(game_id)
         if not session or session.status != "active":
             break
+
+        # ── Handle hand transition: pause so players see the results ──
+        if hasattr(session.engine, "needs_new_hand") and session.engine.needs_new_hand(session.state):
+            # Broadcast the "hand ended" state (shows showdown/results)
+            for s in session.players:
+                msg = _build_state_response(session, s)
+                await ws_manager.send_to_player(game_id, s, msg)
+            await _broadcast_spectators(game_id, session)
+
+            # Pause so players can see the hand results
+            await asyncio.sleep(5.0)
+
+            # Start the next hand
+            session.state = session.engine.start_next_hand(session.state)
+
+            # Check if the game just ended (e.g. all but one player busted)
+            async with async_session() as db:
+                game_ended = await game_manager.check_and_finalize(db, game_id)
+                if game_ended:
+                    await db.commit()
+                    # Broadcast final game-over state
+                    for s in session.players:
+                        msg = _build_state_response(session, s)
+                        await ws_manager.send_to_player(game_id, s, msg)
+                    await _broadcast_spectators(game_id, session)
+                    break
+
+            # Broadcast the fresh new-hand state
+            for s in session.players:
+                msg = _build_state_response(session, s)
+                await ws_manager.send_to_player(game_id, s, msg)
+            await _broadcast_spectators(game_id, session)
+
+            # Small pause before AI acts on the new hand
+            await asyncio.sleep(0.5)
+            continue
 
         async with async_session() as db:
             ai_result = await game_manager.make_ai_move(db, game_id)
@@ -327,10 +472,12 @@ async def _run_ai_loop(game_id: uuid.UUID):
             await db.commit()
             session, _ = ai_result
 
-            # Broadcast to all
+            # Broadcast to all players and spectators
             for s in session.players:
                 msg = _build_state_response(session, s)
                 await ws_manager.send_to_player(game_id, s, msg)
+            await _broadcast_spectators(game_id, session)
 
         if session.status != "active":
             break
+

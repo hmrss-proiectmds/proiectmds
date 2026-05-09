@@ -311,6 +311,27 @@ class GameManager:
         await db.flush()
         return session, move_info
 
+    async def check_and_finalize(
+        self,
+        db: AsyncSession,
+        match_id: uuid.UUID,
+    ) -> bool:
+        """Check if the game is terminal and finalize if so.
+        Call this after start_next_hand to detect poker game-over.
+        Returns True if the game ended."""
+        session = self.sessions.get(match_id)
+        if not session or session.status != "active":
+            return False
+
+        terminal = session.engine.is_terminal(session.state)
+        if terminal:
+            session.status = "finished"
+            session.result = terminal
+            await self._finalize_match(db, session, terminal)
+            await db.flush()
+            return True
+        return False
+
     async def make_ai_move(
         self,
         db: AsyncSession,
@@ -326,8 +347,8 @@ class GameManager:
         if not ai_player or not ai_player.is_ai:
             return None
 
-        # Small delay to feel natural
-        await asyncio.sleep(0.4)
+        # Visible pause so players can follow the action
+        await asyncio.sleep(1.0)
 
         # Pick a move based on bot type
         if session.bot_type == BOT_CHESSBOT:
@@ -385,22 +406,112 @@ class GameManager:
 
     # ── Internal ──
 
+    @staticmethod
+    def _elo_expected(rating_a: int, rating_b: int) -> float:
+        """Expected score of player A vs player B."""
+        return 1.0 / (1.0 + 10 ** ((rating_b - rating_a) / 400.0))
+
+    @staticmethod
+    def _elo_delta(rating: int, opponent_rating: int, score: float, k: int = 32) -> int:
+        """Calculate ELO change for a single pairing."""
+        expected = GameManager._elo_expected(rating, opponent_rating)
+        return round(k * (score - expected))
+
     async def _finalize_match(
         self, db: AsyncSession, session: GameSession, terminal: dict
     ) -> None:
-        result_str = terminal["result"]
-        result_enum = {
-            "player1_win": MatchResult.player1_win,
-            "player2_win": MatchResult.player2_win,
-            "draw": MatchResult.draw,
-        }.get(result_str)
+        from app.models.user import User
 
+        result_str = terminal["result"]
+        # Map result to enum — for multi-player poker, any "playerN_win"
+        # is stored as player1_win (the actual winner is tracked in elo_after)
+        if result_str == "draw":
+            result_enum = MatchResult.draw
+        elif result_str == "player2_win":
+            result_enum = MatchResult.player2_win
+        elif "win" in result_str:
+            result_enum = MatchResult.player1_win
+        else:
+            result_enum = None
+
+        # Update Match record
         match = await db.get(Match, session.match_id)
         if match:
             match.result = result_enum
             match.final_state = session.state.to_dict()
             match.ended_at = datetime.now(timezone.utc)
 
+        # ── ELO Updates ──
+        # Determine the winning seat(s)
+        winner_seat = terminal.get("winner_seat")
+
+        # Collect all participants with their current ELO
+        participants = []  # list of (seat, player_slot, MatchParticipant or None)
+        from sqlalchemy import select
+        result_rows = await db.execute(
+            select(MatchParticipant).where(MatchParticipant.match_id == session.match_id)
+        )
+        mp_map = {mp.seat: mp for mp in result_rows.scalars().all()}
+
+        for seat, slot in session.players.items():
+            mp = mp_map.get(seat)
+            participants.append((seat, slot, mp))
+
+        if len(participants) == 2:
+            # ── 2-player ELO (chess) ──
+            (s1, p1, mp1), (s2, p2, mp2) = participants
+            if result_str == "draw":
+                score1, score2 = 0.5, 0.5
+            elif winner_seat == s1:
+                score1, score2 = 1.0, 0.0
+            else:
+                score1, score2 = 0.0, 1.0
+
+            delta1 = self._elo_delta(p1.elo_rating, p2.elo_rating, score1)
+            delta2 = self._elo_delta(p2.elo_rating, p1.elo_rating, score2)
+
+            for slot, mp, delta in [(p1, mp1, delta1), (p2, mp2, delta2)]:
+                new_elo = max(100, slot.elo_rating + delta)
+                if mp:
+                    mp.elo_after = new_elo
+                if slot.user_id:
+                    user = await db.get(User, slot.user_id)
+                    if user:
+                        user.elo_rating = new_elo
+                        slot.elo_rating = new_elo
+        else:
+            # ── Multi-player ELO (poker) ──
+            # Winner gains from each opponent; losers lose to the winner
+            for seat, slot, mp in participants:
+                if seat == winner_seat:
+                    # Winner: sum of expected-vs-actual against each opponent
+                    total_delta = 0
+                    for s2, p2, _ in participants:
+                        if s2 != seat:
+                            total_delta += self._elo_delta(
+                                slot.elo_rating, p2.elo_rating, 1.0, k=32
+                            )
+                    new_elo = max(100, slot.elo_rating + total_delta)
+                else:
+                    # Loser: lost to the winner
+                    winner_slot = session.players.get(winner_seat)
+                    if winner_slot:
+                        delta = self._elo_delta(
+                            slot.elo_rating, winner_slot.elo_rating, 0.0, k=32
+                        )
+                    else:
+                        delta = -16
+                    new_elo = max(100, slot.elo_rating + delta)
+
+                if mp:
+                    mp.elo_after = new_elo
+                if slot.user_id:
+                    user = await db.get(User, slot.user_id)
+                    if user:
+                        user.elo_rating = new_elo
+                        slot.elo_rating = new_elo
+
 
 # Module-level singleton
 game_manager = GameManager()
+

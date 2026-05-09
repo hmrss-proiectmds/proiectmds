@@ -32,6 +32,7 @@ export default function Navbar() {
             <Link to="/play" className="nav-link nav-link-play">▶ Play</Link>
             <Link to="/leaderboard" className="nav-link">Leaderboard</Link>
             <Link to="/history" className="nav-link">History</Link>
+            <Link to="/spectate" className="nav-link">Spectate</Link>
             {(user.role === 'admin') && (
               <Link to="/admin" className="nav-link nav-link-admin">Admin</Link>
             )}

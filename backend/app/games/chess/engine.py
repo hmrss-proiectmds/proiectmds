@@ -97,7 +97,7 @@ class ChessEngine(GameEngine):
             # The side to move is checkmated → the *other* side won
             winner = 2 if b.turn == chess.WHITE else 1
             result_key = "player1_win" if winner == 1 else "player2_win"
-            return {"result": result_key, "reason": "checkmate"}
+            return {"result": result_key, "reason": "checkmate", "winner_seat": winner}
         if b.is_stalemate():
             return {"result": "draw", "reason": "stalemate"}
         if b.is_insufficient_material():

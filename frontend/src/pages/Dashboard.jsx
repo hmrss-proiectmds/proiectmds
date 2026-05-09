@@ -8,7 +8,7 @@ const roleConfigs = {
     title: 'Player Dashboard',
     cards: [
       { icon: '⚔️', title: 'Play a Game', desc: 'Challenge AI opponents or other players', link: '/play', tag: 'Available' },
-      { icon: '👁️', title: 'Spectate', desc: 'Watch live AI vs AI matches', link: '/spectate', tag: 'Coming soon' },
+      { icon: '👁️', title: 'Spectate', desc: 'Watch live AI vs AI matches', link: '/spectate', tag: 'Available' },
       { icon: '🏆', title: 'Leaderboard', desc: 'See global ELO rankings', link: '/leaderboard', tag: 'Available' },
       { icon: '📊', title: 'Match History', desc: 'Review your past games', link: '/history', tag: 'Available' },
     ],
