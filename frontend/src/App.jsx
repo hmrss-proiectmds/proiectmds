@@ -10,6 +10,7 @@ import GameBoard from './pages/GameBoard';
 import Leaderboard from './pages/Leaderboard';
 import MatchHistory from './pages/MatchHistory';
 import Spectate from './pages/Spectate';
+import Agents from './pages/Agents';
 import ChatWidget from './components/ChatWidget';
 import './index.css';
 
@@ -43,6 +44,7 @@ function AppLayout() {
         <Route path="/history" element={<ProtectedRoute><MatchHistory /></ProtectedRoute>} />
         <Route path="/spectate" element={<ProtectedRoute><Spectate /></ProtectedRoute>} />
         <Route path="/spectate/:gameId" element={<ProtectedRoute><Spectate /></ProtectedRoute>} />
+        <Route path="/agents" element={<ProtectedRoute><Agents /></ProtectedRoute>} />
 
         {/* Catch-all */}
         <Route path="*" element={<Navigate to="/" replace />} />
