@@ -87,6 +87,32 @@ async def upload_agent(
     }
 
 
+@router.patch("/{agent_id}/rename", status_code=status.HTTP_200_OK)
+async def rename_agent(
+    agent_id: str,
+    name: str = Form(..., min_length=1, max_length=100),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Rename an agent owned by the current user."""
+    try:
+        agent_uuid = uuid.UUID(agent_id)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found.")
+
+    result = await db.execute(
+        select(Agent).where(Agent.id == agent_uuid, Agent.owner_id == current_user.id)
+    )
+    agent = result.scalar_one_or_none()
+    if agent is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found.")
+
+    agent.name = name
+    await db.commit()
+    await db.refresh(agent)
+    return {"id": str(agent.id), "name": agent.name}
+
+
 @router.get("/")
 async def list_agents(
     current_user: User = Depends(get_current_user),

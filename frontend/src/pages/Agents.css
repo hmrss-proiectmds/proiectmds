@@ -150,3 +150,61 @@
   font-size: 0.82rem;
   color: var(--text-secondary);
 }
+
+/* Rename UI */
+.agents-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.agents-rename-trigger {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0 0.1rem;
+  opacity: 0.4;
+  transition: opacity 0.15s;
+  line-height: 1;
+}
+
+.agents-agent-card:hover .agents-rename-trigger {
+  opacity: 1;
+}
+
+.agents-rename-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.agents-rename-input {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.9rem;
+  width: 140px;
+}
+
+.agents-rename-btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+  min-width: unset;
+  line-height: 1;
+}
+
+.agents-rename-cancel {
+  background: transparent;
+  border: 1px solid var(--border-color, rgba(255,255,255,0.15));
+  color: var(--text-secondary);
+}
+
+.agents-rename-cancel:hover {
+  border-color: #f87171;
+  color: #f87171;
+}
+
+.agents-agent-name-block {
+  flex: 1;
+  min-width: 0;
+}

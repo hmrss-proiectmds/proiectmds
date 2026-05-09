@@ -27,6 +27,36 @@ export default function Agents() {
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Rename state: { [agentId]: { editing, value, saving, error } }
+  const [renameState, setRenameState] = useState({});
+
+  const startRename = (agent) =>
+    setRenameState(s => ({ ...s, [agent.id]: { editing: true, value: agent.name, saving: false, error: '' } }));
+
+  const cancelRename = (id) =>
+    setRenameState(s => { const n = { ...s }; delete n[id]; return n; });
+
+  const handleRename = async (agentId) => {
+    const rs = renameState[agentId];
+    if (!rs || !rs.value.trim()) return;
+    setRenameState(s => ({ ...s, [agentId]: { ...s[agentId], saving: true, error: '' } }));
+    try {
+      const form = new FormData();
+      form.append('name', rs.value.trim());
+      const res = await fetch(`/api/agents/${agentId}/rename`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${getToken()}` },
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Rename failed.');
+      setAgents(prev => prev.map(a => a.id === agentId ? { ...a, name: data.name } : a));
+      cancelRename(agentId);
+    } catch (err) {
+      setRenameState(s => ({ ...s, [agentId]: { ...s[agentId], saving: false, error: err.message } }));
+    }
+  };
+
   // Upload form state
   const [name, setName] = useState('');
   const [gameType, setGameType] = useState('chess');
@@ -164,12 +194,33 @@ export default function Agents() {
           <p className="agents-empty">No agents yet. Upload your first one above!</p>
         ) : (
           <div className="agents-grid">
-            {agents.map(agent => (
+            {agents.map(agent => {
+              const rs = renameState[agent.id];
+              return (
               <div key={agent.id} className="card agents-agent-card">
                 <div className="agents-agent-header">
                   <span className="agents-agent-icon">{agent.game_type === 'chess' ? '♟️' : '🃏'}</span>
-                  <div>
-                    <div className="agents-agent-name">{agent.name}</div>
+                  <div className="agents-agent-name-block">
+                    {rs?.editing ? (
+                      <div className="agents-rename-row">
+                        <input
+                          className="agents-input agents-rename-input"
+                          value={rs.value}
+                          maxLength={100}
+                          autoFocus
+                          onChange={e => setRenameState(s => ({ ...s, [agent.id]: { ...s[agent.id], value: e.target.value } }))}
+                          onKeyDown={e => { if (e.key === 'Enter') handleRename(agent.id); if (e.key === 'Escape') cancelRename(agent.id); }}
+                        />
+                        <button className="btn btn-primary agents-rename-btn" onClick={() => handleRename(agent.id)} disabled={rs.saving}>✓</button>
+                        <button className="btn agents-rename-btn agents-rename-cancel" onClick={() => cancelRename(agent.id)}>✕</button>
+                        {rs.error && <span className="agents-error" style={{fontSize:'0.75rem'}}>{rs.error}</span>}
+                      </div>
+                    ) : (
+                      <div className="agents-name-row">
+                        <div className="agents-agent-name">{agent.name}</div>
+                        <button className="agents-rename-trigger" title="Rename" onClick={() => startRename(agent)}>✏️</button>
+                      </div>
+                    )}
                     <div className="agents-agent-meta">{agent.game_type}</div>
                   </div>
                   <span className={`badge ${STATUS_BADGE[agent.status] || 'badge-accent'} agents-status-badge`}>
@@ -181,7 +232,8 @@ export default function Agents() {
                   <span>🕒 {timeAgo(agent.created_at)}</span>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
