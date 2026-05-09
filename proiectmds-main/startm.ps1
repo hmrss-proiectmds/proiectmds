@@ -36,15 +36,15 @@ Write-Host "  -> PostgreSQL is ready" -ForegroundColor Green
 # ── 3. Backend ──
 Write-Host "[3/4] Starting backend (FastAPI + Uvicorn)..." -ForegroundColor Yellow
 
-# Activate venv and run migrations + server
+# Use the venv Python directly (works regardless of execution policy)
+$venvPython = "C:\Users\maram\Downloads\proiectmds-main\.venv\Scripts\python.exe"
 $backendJob = Start-Process powershell -ArgumentList @(
     "-NoExit", "-ExecutionPolicy", "Bypass", "-Command",
     "cd '$PSScriptRoot\backend'; " +
-    "& '.\.venv\Scripts\Activate.ps1'; " +
     "Write-Host 'Running Alembic migrations...' -ForegroundColor Yellow; " +
-    "alembic upgrade head; " +
+    "& '$venvPython' -m alembic upgrade head; " +
     "Write-Host 'Starting Uvicorn...' -ForegroundColor Green; " +
-    "uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
+    "& '$venvPython' -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
 ) -PassThru
 
 Write-Host "  -> Backend starting on http://localhost:8000" -ForegroundColor Green

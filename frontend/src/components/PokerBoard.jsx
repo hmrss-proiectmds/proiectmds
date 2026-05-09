@@ -215,11 +215,6 @@ export default function PokerBoard({
                       <span className="showdown-trophy">🏆</span>
                       <span className="showdown-winner-name">{winnerPlayer?.username || `Seat ${w.seat}`}</span>
                       <span className="showdown-hand-name">{w.hand_name}</span>
-                      <div className="showdown-cards">
-                        {w.cards.map((card, ci) => (
-                          <CardFace key={ci} card={card} className="showdown-card" />
-                        ))}
-                      </div>
                       <span className="showdown-amount">+${w.amount_won}</span>
                     </div>
                   );
