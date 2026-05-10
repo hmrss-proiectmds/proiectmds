@@ -53,7 +53,7 @@ export default function BulkSimulation() {
 
   // Load past simulations on mount
   useEffect(() => {
-    api.get('/api/simulations').then(r => setSimulations(r.data)).catch(() => {});
+    api.get('/api/simulations').then(r => setSimulations(r)).catch(() => {});
   }, []);
 
   // Poll active simulation
@@ -61,8 +61,7 @@ export default function BulkSimulation() {
     if (!activeSimId) return;
     pollRef.current = setInterval(async () => {
       try {
-        const r = await api.get(`/api/simulations/${activeSimId}`);
-        const sim = r.data;
+        const sim = await api.get(`/api/simulations/${activeSimId}`);
         if (sim.state === 'SUCCESS') {
           clearInterval(pollRef.current);
           setResult(sim.result);
@@ -86,7 +85,7 @@ export default function BulkSimulation() {
   const refreshList = async () => {
     try {
       const r = await api.get('/api/simulations');
-      setSimulations(r.data);
+      setSimulations(r);
     } catch {}
   };
 
@@ -96,13 +95,12 @@ export default function BulkSimulation() {
     setResult(null);
     setLoading(true);
     try {
-      const r = await api.post('/api/simulations', {
+      const sim = await api.post('/api/simulations', {
         game_type: gameType,
         bot_a: botA,
         bot_b: botB,
         num_games: numGames,
       });
-      const sim = r.data;
       if (sim.state === 'SUCCESS') {
         // Sync fallback — result is immediate
         setResult(sim.result);
@@ -119,10 +117,10 @@ export default function BulkSimulation() {
 
   const handleDownload = async (simId, fmt) => {
     try {
-      const r = await api.get(`/api/simulations/${simId}/download?fmt=${fmt}`, {
-        responseType: 'blob',
+      const blob = await api.get(`/api/simulations/${simId}/download?fmt=${fmt}`, {
+        asBlob: true,
       });
-      const url = URL.createObjectURL(r.data);
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `simulation_${simId.slice(0, 8)}.${fmt}`;
@@ -136,7 +134,7 @@ export default function BulkSimulation() {
   const loadSimResult = async (simId) => {
     try {
       const r = await api.get(`/api/simulations/${simId}`);
-      if (r.data.result) setResult(r.data.result);
+      if (r.result) setResult(r.result);
     } catch {}
   };
 
