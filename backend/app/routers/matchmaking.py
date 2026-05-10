@@ -69,6 +69,15 @@ def _remove_from_queue(entity_id: uuid.UUID, game_type: str) -> bool:
     return len(_queues[game_type]) < before
 
 
+def remove_entity_globally(entity_id: uuid.UUID):
+    """
+    Remove a player or agent from ALL matchmaking queues.
+    Call this when an agent is deleted or a user is banned to prevent 'Zombie' entries.
+    """
+    for game_type in list(_queues.keys()):
+        _queues[game_type] = [e for e in _queues[game_type] if e.entity_id != entity_id]
+
+
 async def _try_match(game_type: str, db: AsyncSession):
     """If two or more entries are queued, pair the first two and start a game."""
     q = _get_queue(game_type)
