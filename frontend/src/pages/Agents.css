@@ -208,3 +208,121 @@
   flex: 1;
   min-width: 0;
 }
+
+/* ── Input hint ── */
+.agents-input-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted, var(--text-secondary));
+  margin-top: 0.2rem;
+}
+
+.agents-input-hint code {
+  background: rgba(255,255,255,0.08);
+  padding: 0.05rem 0.3rem;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+/* ── Checkbox label ── */
+.agents-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.2rem 0;
+}
+
+.agents-checkbox-label input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-color, #7c3aed);
+  cursor: pointer;
+}
+
+/* ── Tabs ── */
+.agents-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.1));
+}
+
+.agents-tab {
+  padding: 0.6rem 1.2rem;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.agents-tab:hover { color: var(--text-primary); }
+
+.agents-tab--active {
+  color: var(--accent-color, #7c3aed);
+  border-bottom-color: var(--accent-color, #7c3aed);
+}
+
+.agents-tab-content { padding-top: 0.5rem; }
+
+/* ── Webhook URL chip ── */
+.agents-webhook-url {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  background: rgba(255,255,255,0.04);
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Agent card action row ── */
+.agents-agent-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-color, rgba(255,255,255,0.08));
+}
+
+.agents-action-btn {
+  font-size: 0.78rem !important;
+  padding: 0.25rem 0.65rem !important;
+  min-width: unset !important;
+}
+
+/* ── Error button variant ── */
+.btn-error {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.btn-error:hover {
+  background: rgba(239, 68, 68, 0.22);
+}
+
+/* ── Count badge ── */
+.agents-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-color, #7c3aed);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  margin-left: 0.5rem;
+  min-width: 1.4rem;
+  vertical-align: middle;
+}
