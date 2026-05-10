@@ -31,6 +31,7 @@ export default function Navbar() {
             <Link to="/" className="nav-link">Dashboard</Link>
             <Link to="/play" className="nav-link nav-link-play">▶ Play</Link>
             <Link to="/agents" className="nav-link">Agents</Link>
+            <Link to="/simulations" className="nav-link">⚡ Simulate</Link>
             <Link to="/leaderboard" className="nav-link">Leaderboard</Link>
             <Link to="/history" className="nav-link">History</Link>
             <Link to="/spectate" className="nav-link">Spectate</Link>
