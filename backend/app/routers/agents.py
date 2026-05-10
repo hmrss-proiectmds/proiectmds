@@ -240,6 +240,11 @@ async def delete_agent(
     agent = result.scalar_one_or_none()
     if agent is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found.")
+    
+    # [ISSUE #10] Remove from matchmaking queue before deletion to prevent "Zombies"
+    from app.routers.matchmaking import remove_entity_globally
+    remove_entity_globally(agent_id)
+
     await db.delete(agent)
     await db.commit()
 
