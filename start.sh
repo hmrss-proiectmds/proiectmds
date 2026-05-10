@@ -38,14 +38,23 @@ echo "[3/4] Starting backend (FastAPI + Uvicorn)..."
   echo "Running Alembic migrations..."
   alembic upgrade head
   echo "Starting Uvicorn..."
-  uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+  uvicorn app.main:app --reload --reload-exclude ".venv" --host 0.0.0.0 --port 8000
 ) &
 
 echo "  -> Backend starting on http://localhost:8000"
 echo "  -> API docs at http://localhost:8000/docs"
 
-# ── 4. Frontend ──
-echo "[4/4] Starting frontend (Vite dev server)..."
+# ── 4. Celery Worker ──
+echo "[4/5] Starting Celery worker..."
+(
+  cd "$SCRIPT_DIR/backend"
+  source .venv/bin/activate
+  celery -A app.celery_app worker --loglevel=info
+) &
+echo "  -> Celery worker is running"
+
+# ── 5. Frontend ──
+echo "[5/5] Starting frontend (Vite dev server)..."
 (
   cd "$SCRIPT_DIR/frontend"
   npm run dev
@@ -59,6 +68,7 @@ echo "====================================="
 echo ""
 echo "  Frontend:  http://localhost:5173"
 echo "  Backend:   http://localhost:8000"
+echo "  Celery:    Worker running"
 echo "  API Docs:  http://localhost:8000/docs"
 echo ""
 echo "Press Ctrl+C to stop all services."
