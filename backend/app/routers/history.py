@@ -111,7 +111,12 @@ async def get_match_history(
                     u = await db.get(User, p.player_id)
                     opponents.append(u.username if u else f"Seat {p.seat}")
                 else:
-                    opponents.append(f"Bot (Seat {p.seat})")
+                    if p.agent_id:
+                        from app.models.agent import Agent
+                        a = await db.get(Agent, p.agent_id)
+                        opponents.append(a.name if a else f"Agent (Seat {p.seat})")
+                    else:
+                        opponents.append(f"Bot (Seat {p.seat})")
 
         entries.append(MatchHistoryEntry(
             match_id=match.id,

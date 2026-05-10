@@ -506,6 +506,12 @@ class GameManager:
                     if user:
                         user.elo_rating = new_elo
                         slot.elo_rating = new_elo
+                elif getattr(slot, "agent_id", None):
+                    from app.models.agent import Agent
+                    agent = await db.get(Agent, slot.agent_id)
+                    if agent:
+                        agent.elo_rating = new_elo
+                        slot.elo_rating = new_elo
         else:
             # ── Multi-player ELO (poker) ──
             # Winner gains from each opponent; losers lose to the winner
@@ -536,6 +542,12 @@ class GameManager:
                     user = await db.get(User, slot.user_id)
                     if user:
                         user.elo_rating = new_elo
+                        slot.elo_rating = new_elo
+                elif getattr(slot, "agent_id", None):
+                    from app.models.agent import Agent
+                    agent = await db.get(Agent, slot.agent_id)
+                    if agent:
+                        agent.elo_rating = new_elo
                         slot.elo_rating = new_elo
 
 
