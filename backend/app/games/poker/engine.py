@@ -196,31 +196,37 @@ class PokerEngine(GameEngine):
             if not pot_winners:
                 return None
 
-            # Collect all winners across pots
-            winners = []
+            # Consolidate winners across all pots (main + side pots)
+            # map: seat -> {seat, hand_name, cards, amount_won}
+            winner_map = {}
+
             for pot_id, (amount, hand_rank, winner_ids) in pot_winners.items():
                 for wid in winner_ids:
+                    seat = wid + 1
                     hand_cards = game.hands.get(wid, [])
                     hand_name = _hand_rank_name(hand_rank)
-                    winners.append({
-                        "seat": wid + 1,  # 1-indexed
-                        "cards": [_card_str(c) for c in hand_cards],
-                        "hand_name": hand_name,
-                        "amount_won": amount // len(winner_ids),
-                    })
+                    
+                    if seat not in winner_map:
+                        winner_map[seat] = {
+                            "seat": seat,
+                            "cards": [_card_str(c) for c in hand_cards],
+                            "hand_name": hand_name,
+                            "amount_won": 0
+                        }
+                    # Sum the amounts from different pots
+                    winner_map[seat]["amount_won"] += (amount // len(winner_ids))
 
-            if not winners:
-                return None
+            winners = list(winner_map.values())
 
-            # Add showdown log entries
+            # Add showdown log entries (one entry per winner)
             for w in winners:
                 entry = f"🏆 Seat {w['seat']} wins ${w['amount_won']} with {w['hand_name']} ({', '.join(w['cards'])})"
                 log.append(entry)
 
-            # Also reveal all hands that went to showdown (non-folded)
+            # Reveal all hole hands that went to showdown
             revealed_hands = {}
             for pid, cards in game.hands.items():
-                revealed_hands[pid + 1] = [_card_str(c) for c in cards]  # seat (1-indexed)
+                revealed_hands[pid + 1] = [_card_str(c) for c in cards]
 
             return {
                 "winners": winners,

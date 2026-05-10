@@ -15,8 +15,9 @@ passlib[bcrypt]==1.7.4
 python-jose[cryptography]==3.5.0
 python-multipart==0.0.27
 
-# ── Redis ──
+# ── Redis & Tasks ──
 redis==7.4.0
+celery==5.4.0
 
 # ── Game engines ──
 python-chess==1.999
