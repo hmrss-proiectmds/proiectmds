@@ -228,6 +228,7 @@ export default function AdminPanel() {
                       <th>Type</th>
                       <th>Players</th>
                       <th>Started</th>
+                      <th className="text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -237,6 +238,9 @@ export default function AdminPanel() {
                         <td>{g.game_type}</td>
                         <td>{g.players.join(' vs ')}</td>
                         <td className="text-muted">{timeAgo(g.started_at)}</td>
+                        <td className="text-right">
+                          <button className="btn btn-sm btn-accent" onClick={() => window.location.href = `/spectate/${g.game_id}`}>🔴 Spectate</button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
