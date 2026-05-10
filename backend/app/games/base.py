@@ -4,7 +4,7 @@ Every game type (chess, poker, etc.) implements these contracts.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Optional
 
 
 class GameState(ABC):

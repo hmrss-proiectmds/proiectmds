@@ -1,12 +1,13 @@
 """
-Agents router — upload and list AI agent scripts.
+Agents router — register webhook agents, upload Python scripts, list and manage agents.
 """
 
-import os
 import uuid
 from pathlib import Path
+from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,12 +30,98 @@ def _safe_filename(filename: str) -> str:
     return Path(filename).name
 
 
-@router.post("/upload", status_code=status.HTTP_201_CREATED)
+# ── Schemas ───────────────────────────────────────────────────────────────────
+
+
+class RegisterWebhookRequest(BaseModel):
+    name: str
+    game_type: str = "chess"
+    webhook_url: str  # validated as non-empty URL string
+    continuous_queue: bool = False
+
+
+class UpdateAgentRequest(BaseModel):
+    continuous_queue: Optional[bool] = None
+    webhook_url: Optional[str] = None
+
+
+class AgentResponse(BaseModel):
+    id: uuid.UUID
+    name: str
+    game_type: str
+    integration_mode: str
+    webhook_url: Optional[str]
+    elo_rating: int
+    status: str
+    continuous_queue: bool
+    created_at: str
+
+    @classmethod
+    def from_orm(cls, a: Agent) -> "AgentResponse":
+        return cls(
+            id=a.id,
+            name=a.name,
+            game_type=a.game_type,
+            integration_mode=a.integration_mode.value,
+            webhook_url=a.webhook_url,
+            elo_rating=a.elo_rating,
+            status=a.status.value,
+            continuous_queue=a.continuous_queue,
+            created_at=a.created_at.isoformat(),
+        )
+
+
+# ── Webhook registration ───────────────────────────────────────────────────────
+
+
+@router.post("/register-webhook", status_code=status.HTTP_201_CREATED, response_model=AgentResponse)
+async def register_webhook_agent(
+    body: RegisterWebhookRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Register a webhook-mode agent.
+
+    The platform will POST game state JSON to *webhook_url* whenever it's
+    this agent's turn. The endpoint must respond with {"move": "<string>"}.
+    """
+    if body.game_type not in ALLOWED_GAME_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"game_type must be one of: {', '.join(sorted(ALLOWED_GAME_TYPES))}",
+        )
+    if not body.webhook_url.startswith(("http://", "https://")):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="webhook_url must start with http:// or https://",
+        )
+
+    agent = Agent(
+        owner_id=current_user.id,
+        name=body.name,
+        game_type=body.game_type,
+        integration_mode=IntegrationMode.webhook,
+        webhook_url=body.webhook_url,
+        continuous_queue=body.continuous_queue,
+    )
+    db.add(agent)
+    await db.commit()
+    await db.refresh(agent)
+    return AgentResponse.from_orm(agent)
+
+
+# ── Script upload ─────────────────────────────────────────────────────────────
+
+
+@router.post("/upload", status_code=status.HTTP_201_CREATED, response_model=AgentResponse)
 async def upload_agent(
     name: str = Form(..., min_length=1, max_length=100),
     game_type: str = Form(...),
     file: UploadFile = File(...),
-    current_user: User = Depends(require_role(UserRole.ai_developer, UserRole.ai_agent_owner, UserRole.admin)),
+    current_user: User = Depends(
+        require_role(UserRole.ai_developer, UserRole.ai_agent_owner, UserRole.admin)
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """Upload a Python agent script and register it in the database."""
@@ -65,7 +152,6 @@ async def upload_agent(
     dest = AGENTS_DIR / unique_name
     dest.write_bytes(contents)
 
-    # Persist agent record
     agent = Agent(
         owner_id=current_user.id,
         name=name,
@@ -76,32 +162,55 @@ async def upload_agent(
     db.add(agent)
     await db.commit()
     await db.refresh(agent)
+    return AgentResponse.from_orm(agent)
 
-    return {
-        "id": str(agent.id),
-        "name": agent.name,
-        "game_type": agent.game_type,
-        "status": agent.status,
-        "elo_rating": agent.elo_rating,
-        "created_at": agent.created_at.isoformat(),
-    }
+
+# ── Update agent settings ─────────────────────────────────────────────────────
+
+
+@router.patch("/{agent_id}", status_code=status.HTTP_200_OK, response_model=AgentResponse)
+async def update_agent(
+    agent_id: uuid.UUID,
+    body: UpdateAgentRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update agent settings: webhook_url and/or continuous_queue toggle."""
+    result = await db.execute(
+        select(Agent).where(Agent.id == agent_id, Agent.owner_id == current_user.id)
+    )
+    agent = result.scalar_one_or_none()
+    if agent is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found.")
+
+    if body.continuous_queue is not None:
+        agent.continuous_queue = body.continuous_queue
+    if body.webhook_url is not None:
+        if body.webhook_url and not body.webhook_url.startswith(("http://", "https://")):
+            raise HTTPException(
+                status_code=422,
+                detail="webhook_url must start with http:// or https://",
+            )
+        agent.webhook_url = body.webhook_url or None
+
+    await db.commit()
+    await db.refresh(agent)
+    return AgentResponse.from_orm(agent)
+
+
+# ── Rename ────────────────────────────────────────────────────────────────────
 
 
 @router.patch("/{agent_id}/rename", status_code=status.HTTP_200_OK)
 async def rename_agent(
-    agent_id: str,
+    agent_id: uuid.UUID,
     name: str = Form(..., min_length=1, max_length=100),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Rename an agent owned by the current user."""
-    try:
-        agent_uuid = uuid.UUID(agent_id)
-    except ValueError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found.")
-
     result = await db.execute(
-        select(Agent).where(Agent.id == agent_uuid, Agent.owner_id == current_user.id)
+        select(Agent).where(Agent.id == agent_id, Agent.owner_id == current_user.id)
     )
     agent = result.scalar_one_or_none()
     if agent is None:
@@ -113,7 +222,30 @@ async def rename_agent(
     return {"id": str(agent.id), "name": agent.name}
 
 
-@router.get("/")
+# ── Delete ────────────────────────────────────────────────────────────────────
+
+
+@router.delete("/{agent_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_agent(
+    agent_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete an agent owned by the current user."""
+    result = await db.execute(
+        select(Agent).where(Agent.id == agent_id, Agent.owner_id == current_user.id)
+    )
+    agent = result.scalar_one_or_none()
+    if agent is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found.")
+    await db.delete(agent)
+    await db.commit()
+
+
+# ── List ──────────────────────────────────────────────────────────────────────
+
+
+@router.get("/", response_model=list[AgentResponse])
 async def list_agents(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -123,14 +255,4 @@ async def list_agents(
         select(Agent).where(Agent.owner_id == current_user.id).order_by(Agent.created_at.desc())
     )
     agents = result.scalars().all()
-    return [
-        {
-            "id": str(a.id),
-            "name": a.name,
-            "game_type": a.game_type,
-            "status": a.status,
-            "elo_rating": a.elo_rating,
-            "created_at": a.created_at.isoformat(),
-        }
-        for a in agents
-    ]
+    return [AgentResponse.from_orm(a) for a in agents]

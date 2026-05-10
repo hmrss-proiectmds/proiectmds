@@ -27,6 +27,8 @@ class PlayerSlot:
     elo_rating: int
     seat: int
     is_ai: bool = False
+    webhook_url: Optional[str] = None   # set for registered webhook agents
+    agent_id: Optional[uuid.UUID] = None  # DB agent id for registered agents
 
     def to_dict(self) -> dict:
         return {
@@ -87,12 +89,15 @@ class GameManager:
         self,
         db: AsyncSession,
         game_type: str,
-        creator_id: uuid.UUID,
+        creator_id: Optional[uuid.UUID],
         creator_username: str,
         creator_elo: int,
         vs_ai: bool = False,
         bot_type: str = BOT_RANDOM,
         max_players: int = 2,
+        creator_is_agent: bool = False,
+        creator_webhook_url: Optional[str] = None,
+        creator_agent_id: Optional[uuid.UUID] = None,
     ) -> GameSession:
         engine = get_engine(game_type)
 
@@ -115,6 +120,9 @@ class GameManager:
             username=creator_username,
             elo_rating=creator_elo,
             seat=1,
+            is_ai=creator_is_agent,
+            webhook_url=creator_webhook_url,
+            agent_id=creator_agent_id,
         )
 
         session = GameSession(
@@ -154,6 +162,7 @@ class GameManager:
         db.add(MatchParticipant(
             match_id=match_id,
             player_id=creator_id,
+            agent_id=creator_agent_id,
             seat=1,
             elo_before=creator_elo,
         ))
@@ -175,9 +184,12 @@ class GameManager:
         self,
         db: AsyncSession,
         match_id: uuid.UUID,
-        player_id: uuid.UUID,
+        player_id: Optional[uuid.UUID],
         player_username: str,
         player_elo: int,
+        is_agent: bool = False,
+        webhook_url: Optional[str] = None,
+        agent_id: Optional[uuid.UUID] = None,
     ) -> GameSession:
         session = self.sessions.get(match_id)
         if not session:
@@ -196,6 +208,9 @@ class GameManager:
             username=player_username,
             elo_rating=player_elo,
             seat=seat,
+            is_ai=is_agent,
+            webhook_url=webhook_url,
+            agent_id=agent_id,
         )
         session.players[seat] = joiner
 
@@ -206,6 +221,7 @@ class GameManager:
         db.add(MatchParticipant(
             match_id=match_id,
             player_id=player_id,
+            agent_id=agent_id,
             seat=seat,
             elo_before=player_elo,
         ))
@@ -350,8 +366,19 @@ class GameManager:
         # Visible pause so players can follow the action
         await asyncio.sleep(1.0)
 
-        # Pick a move based on bot type
-        if session.bot_type == BOT_CHESSBOT:
+        move: Optional[str] = None
+
+        # ── Webhook agent (registered external bot) ──────────────────────────
+        if ai_player.webhook_url:
+            from app.services.webhook import call_agent_webhook, build_webhook_payload
+            payload = build_webhook_payload(session, current_turn)
+            move = await call_agent_webhook(ai_player.webhook_url, payload)
+            # If webhook fails, fall back to random so the game doesn't stall
+            if not move:
+                move = pick_random_move(session.engine, session.state)
+
+        # ── Built-in bots ─────────────────────────────────────────────────────
+        elif session.bot_type == BOT_CHESSBOT:
             from app.games.bots.hf_chessbot import pick_hf_move
             move = pick_hf_move(session.engine, session.state, temperature=0.3)
         elif session.bot_type == BOT_POKERBOT:

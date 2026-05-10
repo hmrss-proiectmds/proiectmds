@@ -4,10 +4,11 @@ import { api } from '../api/client';
 import './Leaderboard.css';
 
 const ROLE_BADGES = {
-  human_player: { icon: '👤', label: 'Player' },
-  ai_developer: { icon: '👨‍💻', label: 'Developer' },
-  ai_agent_owner: { icon: '🤖', label: 'Agent Owner' },
-  admin: { icon: '🛡️', label: 'Admin' },
+  human_player:   { icon: '👤', label: 'Player',      cls: '' },
+  ai_developer:   { icon: '👨‍💻', label: 'Developer',   cls: 'badge-developer' },
+  ai_agent_owner: { icon: '🤖', label: 'Agent Owner', cls: 'badge-owner' },
+  admin:          { icon: '🛡️', label: 'Admin',       cls: 'badge-admin' },
+  agent:          { icon: '🤖', label: 'AI Agent',    cls: 'badge-agent' },
 };
 
 const RANK_DECORATIONS = {
@@ -20,11 +21,13 @@ export default function Leaderboard() {
   const { user } = useAuth();
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [includeAgents, setIncludeAgents] = useState(true);
 
   useEffect(() => {
-    const fetch = async () => {
+    const load = async () => {
+      setLoading(true);
       try {
-        const data = await api.get('/api/users/leaderboard');
+        const data = await api.get(`/api/users/leaderboard?include_agents=${includeAgents}`);
         setEntries(data.entries || []);
       } catch {
         // ignore
@@ -32,14 +35,27 @@ export default function Leaderboard() {
         setLoading(false);
       }
     };
-    fetch();
-  }, []);
+    load();
+  }, [includeAgents]);
 
   return (
     <div className="page-container animate-fade-in">
       <div className="page-header">
         <h1 className="page-title">🏆 Leaderboard</h1>
         <p className="page-subtitle">Cross-entity ELO rankings — humans and AI agents on one scale</p>
+      </div>
+
+      {/* Filter toggle */}
+      <div className="lb-filters">
+        <label className="lb-toggle-label">
+          <input
+            id="lb-toggle-agents"
+            type="checkbox"
+            checked={includeAgents}
+            onChange={e => setIncludeAgents(e.target.checked)}
+          />
+          Show AI Agents
+        </label>
       </div>
 
       {loading ? (
@@ -57,20 +73,20 @@ export default function Leaderboard() {
             <thead>
               <tr>
                 <th className="lb-th-rank">Rank</th>
-                <th className="lb-th-player">Player</th>
-                <th className="lb-th-role">Role</th>
+                <th className="lb-th-player">Player / Agent</th>
+                <th className="lb-th-role">Type</th>
                 <th className="lb-th-elo">ELO</th>
               </tr>
             </thead>
             <tbody>
               {entries.map((entry) => {
                 const decoration = RANK_DECORATIONS[entry.rank];
-                const role = ROLE_BADGES[entry.role] || ROLE_BADGES.human_player;
-                const isYou = user && entry.username === user.username;
+                const badge = ROLE_BADGES[entry.role] || ROLE_BADGES.human_player;
+                const isYou = user && entry.username === user.username && entry.entity_type === 'human';
                 return (
                   <tr
-                    key={entry.rank}
-                    className={`lb-row ${decoration ? decoration.className : ''} ${isYou ? 'lb-row-you' : ''}`}
+                    key={`${entry.rank}-${entry.username}`}
+                    className={`lb-row ${decoration ? decoration.className : ''} ${isYou ? 'lb-row-you' : ''} ${entry.entity_type === 'agent' ? 'lb-row-agent' : ''}`}
                     id={`lb-rank-${entry.rank}`}
                   >
                     <td className="lb-cell-rank">
@@ -83,10 +99,15 @@ export default function Leaderboard() {
                     <td className="lb-cell-player">
                       <span className="lb-username">{entry.username}</span>
                       {isYou && <span className="badge badge-accent lb-you-badge">You</span>}
+                      {entry.game_type && (
+                        <span className="lb-game-chip">
+                          {entry.game_type === 'chess' ? '♟️' : '🃏'} {entry.game_type}
+                        </span>
+                      )}
                     </td>
                     <td className="lb-cell-role">
-                      <span className="badge lb-role-badge">
-                        {role.icon} {role.label}
+                      <span className={`badge lb-role-badge ${badge.cls}`}>
+                        {badge.icon} {badge.label}
                       </span>
                     </td>
                     <td className="lb-cell-elo">

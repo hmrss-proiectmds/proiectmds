@@ -30,6 +30,7 @@ export default function Navbar() {
           <div className="navbar-links">
             <Link to="/" className="nav-link">Dashboard</Link>
             <Link to="/play" className="nav-link nav-link-play">▶ Play</Link>
+            <Link to="/agents" className="nav-link">Agents</Link>
             <Link to="/leaderboard" className="nav-link">Leaderboard</Link>
             <Link to="/history" className="nav-link">History</Link>
             <Link to="/spectate" className="nav-link">Spectate</Link>
@@ -37,7 +38,7 @@ export default function Navbar() {
               <Link to="/admin" className="nav-link nav-link-admin">Admin</Link>
             )}
             <div className="navbar-user">
-              <span className="badge badge-accent">{roleLabels[user.role]}</span>
+              <span className="badge badge-accent">{roleLabels[user.role] || '👤 Player'}</span>
               <span className="navbar-username">{user.username}</span>
               <span className="navbar-elo font-mono">{user.elo_rating} ELO</span>
               <button className="btn btn-ghost btn-sm" onClick={handleLogout}>

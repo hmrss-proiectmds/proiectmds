@@ -1,14 +1,17 @@
 """
 Users router: profile and leaderboard endpoints.
+
+The leaderboard is cross-entity — humans and AI agents compete on one scale.
 """
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.dependencies.auth import get_current_user
+from app.models.agent import Agent, AgentStatus
 from app.models.user import User
 from app.schemas.auth import UserResponse
 
@@ -25,7 +28,9 @@ class LeaderboardEntry(BaseModel):
     rank: int
     username: str
     elo_rating: int
-    role: str
+    entity_type: str  # "human" | "agent"
+    role: str         # human role or "agent"
+    game_type: str | None = None   # set for agents
 
 
 class LeaderboardResponse(BaseModel):
@@ -33,21 +38,44 @@ class LeaderboardResponse(BaseModel):
 
 
 @router.get("/leaderboard", response_model=LeaderboardResponse)
-async def get_leaderboard(db: AsyncSession = Depends(get_db)):
-    """Return top 50 users by ELO rating."""
-    result = await db.execute(
-        select(User).order_by(User.elo_rating.desc()).limit(50)
-    )
-    users = result.scalars().all()
+async def get_leaderboard(
+    include_agents: bool = Query(True, description="Include registered AI agents"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return the top 50 entities (humans + agents) by ELO rating."""
+    combined: list[dict] = []
 
-    entries = []
-    for i, u in enumerate(users, start=1):
-        entries.append(LeaderboardEntry(
-            rank=i,
-            username=u.username,
-            elo_rating=u.elo_rating,
-            role=u.role.value if hasattr(u.role, 'value') else str(u.role),
-        ))
+    # Fetch all users
+    users_result = await db.execute(select(User))
+    for u in users_result.scalars().all():
+        combined.append({
+            "username": u.username,
+            "elo_rating": u.elo_rating,
+            "entity_type": "human",
+            "role": u.role.value if hasattr(u.role, "value") else str(u.role),
+            "game_type": None,
+        })
 
+    # Optionally fetch active agents
+    if include_agents:
+        agents_result = await db.execute(
+            select(Agent).where(Agent.status == AgentStatus.active)
+        )
+        for a in agents_result.scalars().all():
+            combined.append({
+                "username": a.name,
+                "elo_rating": a.elo_rating,
+                "entity_type": "agent",
+                "role": "agent",
+                "game_type": a.game_type,
+            })
+
+    # Sort by ELO descending, limit 50
+    combined.sort(key=lambda x: x["elo_rating"], reverse=True)
+    combined = combined[:50]
+
+    entries = [
+        LeaderboardEntry(rank=i + 1, **entry)
+        for i, entry in enumerate(combined)
+    ]
     return LeaderboardResponse(entries=entries)
-

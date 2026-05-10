@@ -15,12 +15,11 @@ from app.models.user import User
 from app.schemas.game import (
     CreateGameRequest,
     GameResponse,
-    GameStateResponse,
     JoinAiRequest,
     OpenGameResponse,
     PlayerInfo,
 )
-from app.services.auth import decode_access_token, get_user_by_id
+from app.services.auth import decode_access_token
 from app.services.game import game_manager
 from app.websocket.manager import manager as ws_manager
 

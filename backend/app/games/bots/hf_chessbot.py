@@ -12,9 +12,7 @@ Model: https://huggingface.co/Maxlegrec/ChessBot
 from __future__ import annotations
 
 import logging
-import os
 from pathlib import Path
-from typing import Optional
 
 import chess
 import torch
