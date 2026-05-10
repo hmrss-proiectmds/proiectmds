@@ -1,0 +1,138 @@
+.chess-board-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.chess-board {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  width: min(520px, 90vw);
+  height: min(520px, 90vw);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg), 0 0 40px rgba(0, 0, 0, 0.4);
+  border: 2px solid var(--color-border);
+}
+
+.chess-square {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  user-select: none;
+  transition: background-color 100ms ease;
+}
+
+.chess-square.light {
+  background: #454F41;
+}
+.chess-square.dark {
+  background: #043908;
+}
+
+/* Last move highlight */
+.chess-square.last-move.light {
+  background: #c1243b;
+  opacity: 0.8;
+}
+.chess-square.last-move.dark {
+  background: #A71D31;
+  opacity: 0.8;
+}
+
+/* Selected piece */
+.chess-square.selected.light {
+  background: #f7ec5a;
+}
+.chess-square.selected.dark {
+  background: #d6ca3a;
+}
+
+/* King in check */
+.chess-square.in-check {
+  background: radial-gradient(circle, #ff3333 0%, #cc0000 60%, transparent 100%) !important;
+}
+
+/* Movable piece cursor */
+.chess-square.movable {
+  cursor: pointer;
+}
+
+/* ── Pieces ── */
+.chess-piece {
+  font-size: min(3.6rem, 10vw);
+  line-height: 1;
+  pointer-events: none;
+  filter: drop-shadow(1px 2px 2px rgba(0, 0, 0, 0.4));
+  transition: transform 100ms ease;
+}
+
+.white-piece {
+  color: #fff;
+  text-shadow: 0 0 4px rgba(255, 255, 255, 0.3);
+}
+
+.black-piece {
+  color: #1a1a2e;
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+}
+
+.chess-square.movable:hover .chess-piece {
+  transform: scale(1.08);
+}
+
+/* ── Legal move indicators ── */
+.legal-dot {
+  position: absolute;
+  width: 28%;
+  height: 28%;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.legal-capture {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 5px solid rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.chess-square:has(.legal-dot),
+.chess-square:has(.legal-capture) {
+  cursor: pointer;
+}
+
+/* ── Coordinates ── */
+.coord-rank {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.coord-file {
+  position: absolute;
+  bottom: 2px;
+  right: 3px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.coord-light {
+  color: #5A6A82;
+}
+.coord-dark {
+  color: #8B9BB4;
+}

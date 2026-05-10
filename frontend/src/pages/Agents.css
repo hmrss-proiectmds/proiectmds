@@ -1,0 +1,328 @@
+.agents-upload-card {
+  max-width: 720px;
+  margin: 0 auto 2rem;
+  padding: 1.75rem 2rem;
+}
+
+.agents-section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 1.25rem;
+  color: var(--text-primary);
+}
+
+.agents-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.agents-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 540px) {
+  .agents-form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.agents-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.agents-input {
+  background: var(--bg-tertiary, #1e1e2e);
+  border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  padding: 0.5rem 0.75rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.agents-input:focus {
+  border-color: var(--accent-color, #7c3aed);
+}
+
+.agents-dropzone {
+  border: 2px dashed var(--border-color, rgba(255,255,255,0.15));
+  border-radius: 8px;
+  padding: 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.agents-dropzone:hover {
+  border-color: var(--accent-color, #7c3aed);
+  background: rgba(124, 58, 237, 0.05);
+}
+
+.agents-dropzone--has-file {
+  border-color: var(--success-color, #22c55e);
+  color: var(--text-primary);
+}
+
+.agents-error {
+  color: #f87171;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.agents-success {
+  color: #4ade80;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.agents-submit {
+  align-self: flex-start;
+  padding: 0.55rem 1.75rem;
+}
+
+/* Agent list */
+.agents-list-section {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.agents-empty {
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.agents-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.agents-agent-card {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.agents-agent-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.agents-agent-icon {
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.agents-agent-name {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.agents-agent-meta {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  text-transform: capitalize;
+}
+
+.agents-status-badge {
+  margin-left: auto;
+  font-size: 0.72rem;
+}
+
+.agents-agent-stats {
+  display: flex;
+  gap: 1.25rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+/* Rename UI */
+.agents-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.agents-rename-trigger {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0 0.1rem;
+  opacity: 0.4;
+  transition: opacity 0.15s;
+  line-height: 1;
+}
+
+.agents-agent-card:hover .agents-rename-trigger {
+  opacity: 1;
+}
+
+.agents-rename-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.agents-rename-input {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.9rem;
+  width: 140px;
+}
+
+.agents-rename-btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+  min-width: unset;
+  line-height: 1;
+}
+
+.agents-rename-cancel {
+  background: transparent;
+  border: 1px solid var(--border-color, rgba(255,255,255,0.15));
+  color: var(--text-secondary);
+}
+
+.agents-rename-cancel:hover {
+  border-color: #f87171;
+  color: #f87171;
+}
+
+.agents-agent-name-block {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Input hint ── */
+.agents-input-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted, var(--text-secondary));
+  margin-top: 0.2rem;
+}
+
+.agents-input-hint code {
+  background: rgba(255,255,255,0.08);
+  padding: 0.05rem 0.3rem;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+/* ── Checkbox label ── */
+.agents-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.2rem 0;
+}
+
+.agents-checkbox-label input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-color, #7c3aed);
+  cursor: pointer;
+}
+
+/* ── Tabs ── */
+.agents-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.1));
+}
+
+.agents-tab {
+  padding: 0.6rem 1.2rem;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.agents-tab:hover { color: var(--text-primary); }
+
+.agents-tab--active {
+  color: var(--accent-color, #7c3aed);
+  border-bottom-color: var(--accent-color, #7c3aed);
+}
+
+.agents-tab-content { padding-top: 0.5rem; }
+
+/* ── Webhook URL chip ── */
+.agents-webhook-url {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  background: rgba(255,255,255,0.04);
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Agent card action row ── */
+.agents-agent-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-color, rgba(255,255,255,0.08));
+}
+
+.agents-action-btn {
+  font-size: 0.78rem !important;
+  padding: 0.25rem 0.65rem !important;
+  min-width: unset !important;
+}
+
+/* ── Error button variant ── */
+.btn-error {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.btn-error:hover {
+  background: rgba(239, 68, 68, 0.22);
+}
+
+/* ── Count badge ── */
+.agents-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-color, #7c3aed);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  margin-left: 0.5rem;
+  min-width: 1.4rem;
+  vertical-align: middle;
+}
