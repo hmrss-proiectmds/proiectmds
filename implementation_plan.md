@@ -444,12 +444,12 @@ proiectmds/
 - [x] ELO rating system + Leaderboard (US 3)
 - [x] Match history page (US 4)
 
-### Phase 4 — Advanced & Admin (Sprint 4)
-- [ ] Bulk simulation engine via Celery (US 6)
-- [ ] Decision logging + download (US 7)
+### Phase 4 — Advanced & Admin (Sprint 4) ✅
+- [x] Bulk simulation engine via Celery (US 6)
+- [x] Decision logging + download (US 7)
 - [x] Admin moderation panel + live metrics (US 11)
 - [x] Sandboxed Python agent upload (US 5 — upload mode frontend/API/runner done)
-- [ ] Polish: dark mode, animations, responsive design
+- [x] Polish: dark mode, animations, responsive design
 
 ---
 

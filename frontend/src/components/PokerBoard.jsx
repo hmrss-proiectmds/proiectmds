@@ -181,7 +181,8 @@ export default function PokerBoard({
               )}
               <div className="opponent-cards">
                 {revealedCards ? (
-                  revealedCards.map((card, i) => (
+                  // Guard: only show the 2 hole cards, never more
+                  revealedCards.slice(0, 2).map((card, i) => (
                     <CardFace key={i} card={card} className="card-reveal" />
                   ))
                 ) : (
@@ -198,9 +199,11 @@ export default function PokerBoard({
         {/* Hand info bar */}
         <div className="poker-hand-info">
           <span className="hand-number">Hand #{handNumber}</span>
-          {handPhase && !handJustEnded && (
+          {handJustEnded ? (
+            <span className="hand-phase phase-showdown">SHOWDOWN</span>
+          ) : handPhase ? (
             <span className={`hand-phase phase-${handPhase.toLowerCase()}`}>{handPhase}</span>
-          )}
+          ) : null}
         </div>
 
         {/* Showdown overlay */}
@@ -208,18 +211,32 @@ export default function PokerBoard({
           <div className="showdown-overlay">
             {showdownInfo?.winners?.length > 0 ? (
               <div className="showdown-content">
+                <div className="showdown-title">🃏 Showdown</div>
                 {showdownInfo.winners.map((w, i) => {
                   const winnerPlayer = players.find((p) => p.seat === w.seat);
+                  // Only show up to 2 hole cards (guard against stale data)
+                  const holeCards = (w.cards || []).slice(0, 2);
                   return (
-                    <div key={i} className="showdown-winner">
-                      <span className="showdown-trophy">🏆</span>
-                      <span className="showdown-winner-name">{winnerPlayer?.username || `Seat ${w.seat}`}</span>
+                    <div key={w.seat} className="showdown-winner">
+                      <div className="showdown-winner-header">
+                        <span className="showdown-trophy">🏆</span>
+                        <span className="showdown-winner-name">
+                          {winnerPlayer?.username || `Seat ${w.seat}`}
+                        </span>
+                      </div>
+                      {holeCards.length > 0 && (
+                        <div className="showdown-winner-cards">
+                          {holeCards.map((card, ci) => (
+                            <CardFace key={ci} card={card} className="card-reveal" />
+                          ))}
+                        </div>
+                      )}
                       <span className="showdown-hand-name">{w.hand_name}</span>
                       <span className="showdown-amount">+${w.amount_won}</span>
                     </div>
                   );
                 })}
-                <span className="showdown-dealing">Dealing next hand...</span>
+                <span className="showdown-dealing">⏳ Dealing next hand...</span>
               </div>
             ) : (
               <span className="showdown-text">🏆 Hand Over — Dealing next hand...</span>
@@ -245,7 +262,14 @@ export default function PokerBoard({
       {/* ── Your hand ── */}
       <div className="poker-your-area">
         <div className="your-cards">
-          {yourHand.length === 0 ? (
+          {handJustEnded ? (
+            // During showdown: show your revealed cards if available, else hide
+            showdownInfo?.revealed_hands?.[yourSeat]
+              ? showdownInfo.revealed_hands[yourSeat].slice(0, 2).map((c, i) => (
+                  <CardFace key={i} card={c} className="card-reveal" />
+                ))
+              : yourHand.map((c, i) => <CardFace key={i} card={c} className="card-deal-in" />)
+          ) : yourHand.length === 0 ? (
             <span className="text-muted">Waiting for deal…</span>
           ) : (
             yourHand.map((c, i) => <CardFace key={i} card={c} className="card-deal-in" />)

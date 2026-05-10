@@ -282,3 +282,126 @@ async def list_agents(
         responses.append(resp)
 
     return responses
+
+
+# ── Decision Logs (US 7) ──────────────────────────────────────────────────────
+
+
+@router.get("/{agent_id}/logs")
+async def get_agent_logs(
+    agent_id: uuid.UUID,
+    match_id: Optional[uuid.UUID] = None,
+    limit: int = 100,
+    offset: int = 0,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Retrieve decision logs for an agent owned by the current user.
+    Optionally filter by match_id. Returns paginated results.
+    """
+    from sqlalchemy import select as sa_select
+    from app.models.decision_log import DecisionLog
+
+    # Verify ownership
+    result = await db.execute(
+        sa_select(Agent).where(Agent.id == agent_id, Agent.owner_id == current_user.id)
+    )
+    agent = result.scalar_one_or_none()
+    if agent is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found.")
+
+    query = sa_select(DecisionLog).where(DecisionLog.agent_id == agent_id)
+    if match_id:
+        query = query.where(DecisionLog.match_id == match_id)
+    query = query.order_by(DecisionLog.logged_at.desc()).limit(limit).offset(offset)
+
+    rows = await db.execute(query)
+    logs = rows.scalars().all()
+
+    return [
+        {
+            "id": str(log.id),
+            "agent_id": str(log.agent_id),
+            "match_id": str(log.match_id),
+            "turn_number": log.turn_number,
+            "request_payload": log.request_payload,
+            "response_payload": log.response_payload,
+            "exception": log.exception,
+            "logged_at": log.logged_at.isoformat(),
+        }
+        for log in logs
+    ]
+
+
+@router.get("/{agent_id}/logs/download")
+async def download_agent_logs(
+    agent_id: uuid.UUID,
+    match_id: Optional[uuid.UUID] = None,
+    fmt: str = "json",
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Download all decision logs for an agent as JSON or CSV.
+    Optionally filter by match_id.
+    """
+    import csv
+    import io
+    import json as json_lib
+    from fastapi.responses import StreamingResponse
+    from sqlalchemy import select as sa_select
+    from app.models.decision_log import DecisionLog
+
+    result = await db.execute(
+        sa_select(Agent).where(Agent.id == agent_id, Agent.owner_id == current_user.id)
+    )
+    agent = result.scalar_one_or_none()
+    if agent is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found.")
+
+    query = sa_select(DecisionLog).where(DecisionLog.agent_id == agent_id)
+    if match_id:
+        query = query.where(DecisionLog.match_id == match_id)
+    query = query.order_by(DecisionLog.logged_at.asc())
+
+    rows = await db.execute(query)
+    logs = rows.scalars().all()
+
+    filename = f"decision_logs_{str(agent_id)[:8]}"
+
+    if fmt == "csv":
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["id", "match_id", "turn_number", "move_sent", "exception", "logged_at"])
+        for log in logs:
+            move = (log.response_payload or {}).get("move", "")
+            writer.writerow([
+                str(log.id), str(log.match_id), log.turn_number,
+                move, log.exception or "", log.logged_at.isoformat()
+            ])
+        output.seek(0)
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={filename}.csv"},
+        )
+    else:
+        data = [
+            {
+                "id": str(log.id),
+                "match_id": str(log.match_id),
+                "turn_number": log.turn_number,
+                "request_payload": log.request_payload,
+                "response_payload": log.response_payload,
+                "exception": log.exception,
+                "logged_at": log.logged_at.isoformat(),
+            }
+            for log in logs
+        ]
+        json_bytes = json_lib.dumps(data, indent=2).encode("utf-8")
+        return StreamingResponse(
+            iter([json_bytes]),
+            media_type="application/json",
+            headers={"Content-Disposition": f"attachment; filename={filename}.json"},
+        )

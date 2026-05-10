@@ -86,9 +86,13 @@ export default function GameBoard() {
   const resultText = result
     ? result.result === 'draw'
       ? `Draw — ${(result.reason || '').replace(/_/g, ' ')}`
-      : result.result === `player${your_seat}_win`
-        ? `You won! — ${(result.reason || '').replace(/_/g, ' ')}`
-        : `You lost — ${(result.reason || '').replace(/_/g, ' ')}`
+      : result.reason === 'resignation'
+        ? result.result === `player${your_seat}_win`
+          ? 'Opponent quit the game'
+          : 'You quit the game'
+        : result.result === `player${your_seat}_win`
+          ? `You won! — ${(result.reason || '').replace(/_/g, ' ')}`
+          : `You lost — ${(result.reason || '').replace(/_/g, ' ')}`
     : null;
 
   // Format move history into pairs (chess only)
@@ -347,7 +351,12 @@ export default function GameBoard() {
             <button
               className="btn btn-danger w-full"
               onClick={() => {
-                if (confirm('Are you sure you want to resign?')) sendResign();
+                if (confirm(isPoker ? 'Quit this poker game?' : 'Are you sure you want to resign?')) {
+                  sendResign();
+                  // Navigate to lobby after a short delay to allow the
+                  // resign message to be sent before the WS closes.
+                  setTimeout(() => navigate('/play'), 500);
+                }
               }}
             >
               🏳️ {isPoker ? 'Quit Game' : 'Resign'}

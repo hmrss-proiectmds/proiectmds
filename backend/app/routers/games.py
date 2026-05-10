@@ -44,7 +44,7 @@ def _session_to_response(session) -> GameResponse:
 def _build_state_response(session, seat: int) -> dict:
     view = session.engine.get_player_view(session.state, seat)
     players = [PlayerInfo(**p.to_dict()) for p in session.players.values()]
-    return {
+    msg = {
         "type": "game_state",
         "game_id": str(session.match_id),
         "game_type": session.game_type,
@@ -54,6 +54,13 @@ def _build_state_response(session, seat: int) -> dict:
         "players": [p.model_dump(mode="json") for p in players],
         **view,
     }
+    # If the session is finished (e.g. via resign), override game_over and result
+    # so the frontend always sees the correct terminal state regardless of engine state.
+    if session.status == "finished":
+        msg["game_over"] = True
+        if session.result:
+            msg["result"] = session.result
+    return msg
 
 
 def _build_spectator_response(session) -> dict:
@@ -65,7 +72,7 @@ def _build_spectator_response(session) -> dict:
     view.pop("your_hand", None)
     view.pop("your_chips", None)
     view["legal_moves"] = []
-    return {
+    msg = {
         "type": "game_state",
         "game_id": str(session.match_id),
         "game_type": session.game_type,
@@ -75,6 +82,12 @@ def _build_spectator_response(session) -> dict:
         "players": [p.model_dump(mode="json") for p in players],
         **view,
     }
+    # Same override for spectators
+    if session.status == "finished":
+        msg["game_over"] = True
+        if session.result:
+            msg["result"] = session.result
+    return msg
 
 
 async def _broadcast_spectators(game_id: uuid.UUID, session):

@@ -39,22 +39,31 @@ async function request(endpoint, options = {}) {
     headers,
   });
 
-  // Try to parse JSON body (may be empty for 204 etc.)
-  let data;
-  const contentType = response.headers.get('content-type');
-  if (contentType && contentType.includes('application/json')) {
-    data = await response.json();
-  }
-
   if (!response.ok) {
-    const message = data?.detail || `Request failed (${response.status})`;
+    let errorData;
+    try {
+      errorData = await response.json();
+    } catch {
+      errorData = { detail: `Request failed (${response.status})` };
+    }
+    const message = errorData?.detail || `Request failed (${response.status})`;
     const error = new Error(message);
     error.status = response.status;
-    error.data = data;
+    error.data = errorData;
     throw error;
   }
 
-  return data;
+  const contentType = response.headers.get('content-type');
+  if (contentType && contentType.includes('application/json')) {
+    return await response.json();
+  }
+
+  // Handle blob/file responses
+  if (options.asBlob || (contentType && (contentType.includes('text/csv') || contentType.includes('application/octet-stream')))) {
+    return await response.blob();
+  }
+
+  return response;
 }
 
 /** Convenience methods */

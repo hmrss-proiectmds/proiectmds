@@ -1,17 +1,28 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import './Navbar.css';
 
 const roleLabels = {
   human_player: '👤 Player',
-  ai_developer: '👨‍💻 Developer',
+  ai_developer: '👨\u200d💻 Developer',
   ai_agent_owner: '🤖 Agent Owner',
   admin: '🛡️ Admin',
 };
 
+const NAV_ITEMS = [
+  { to: '/',            label: 'Dashboard',   icon: '⊞' },
+  { to: '/play',        label: 'Play',         icon: '▶', className: 'nav-link-play' },
+  { to: '/agents',      label: 'Agents',       icon: '🤖' },
+  { to: '/simulations', label: 'Simulate',     icon: '⚡' },
+  { to: '/leaderboard', label: 'Leaderboard',  icon: '🏆' },
+  { to: '/history',     label: 'History',      icon: '📜' },
+  { to: '/spectate',    label: 'Spectate',     icon: '👁️' },
+];
+
 export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => {
     logout();
@@ -21,34 +32,58 @@ export default function Navbar() {
   return (
     <nav className="navbar" id="main-navbar">
       <div className="navbar-inner">
+        {/* Brand */}
         <Link to="/" className="navbar-brand">
           <span className="navbar-logo">🎲</span>
           <span className="navbar-title">GamePlatform</span>
         </Link>
 
         {user ? (
-          <div className="navbar-links">
-            <Link to="/" className="nav-link">Dashboard</Link>
-            <Link to="/play" className="nav-link nav-link-play">▶ Play</Link>
-            <Link to="/agents" className="nav-link">Agents</Link>
-            <Link to="/leaderboard" className="nav-link">Leaderboard</Link>
-            <Link to="/history" className="nav-link">History</Link>
-            <Link to="/spectate" className="nav-link">Spectate</Link>
-            {(user.role === 'admin') && (
-              <Link to="/admin" className="nav-link nav-link-admin">Admin</Link>
-            )}
+          <>
+            {/* Nav links */}
+            <div className="navbar-links">
+              {NAV_ITEMS.map(({ to, label, icon, className }) => {
+                if (to === '/admin' && user.role !== 'admin') return null;
+                const isActive = location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
+                return (
+                  <Link
+                    key={to}
+                    to={to}
+                    className={`nav-link ${className || ''} ${isActive ? 'nav-link-active' : ''}`}
+                  >
+                    <span className="nav-icon">{icon}</span>
+                    {label}
+                  </Link>
+                );
+              })}
+              {user.role === 'admin' && (
+                <Link
+                  to="/admin"
+                  className={`nav-link nav-link-admin ${location.pathname === '/admin' ? 'nav-link-active' : ''}`}
+                >
+                  <span className="nav-icon">🛡️</span>
+                  Admin
+                </Link>
+              )}
+            </div>
+
+            {/* User info — pinned to bottom */}
             <div className="navbar-user">
-              <span className="badge badge-accent">{roleLabels[user.role] || '👤 Player'}</span>
-              <span className="navbar-username">{user.username}</span>
-              <span className="navbar-elo font-mono">{user.elo_rating} ELO</span>
-              <button className="btn btn-ghost btn-sm" onClick={handleLogout}>
+              <div className="navbar-user-row">
+                <span className="navbar-username">{user.username}</span>
+                <span className="navbar-elo">{user.elo_rating} ELO</span>
+              </div>
+              <span className="badge badge-accent" style={{ alignSelf: 'flex-start' }}>
+                {roleLabels[user.role] || '👤 Player'}
+              </span>
+              <button className="btn btn-ghost btn-sm w-full" onClick={handleLogout}>
                 Logout
               </button>
             </div>
-          </div>
+          </>
         ) : (
           <div className="navbar-links">
-            <Link to="/login" className="btn btn-ghost btn-sm">Login</Link>
+            <Link to="/login"    className="btn btn-ghost btn-sm">Login</Link>
             <Link to="/register" className="btn btn-primary btn-sm">Register</Link>
           </div>
         )}

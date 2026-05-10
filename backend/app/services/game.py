@@ -377,9 +377,36 @@ class GameManager:
         if ai_player.webhook_url:
             from app.services.webhook import call_agent_webhook, build_webhook_payload
             payload = build_webhook_payload(session, current_turn)
-            move = await call_agent_webhook(ai_player.webhook_url, payload)
-            if not move:
+            exception_msg: Optional[str] = None
+            response_data: Optional[dict] = None
+            try:
+                move = await call_agent_webhook(ai_player.webhook_url, payload)
+                if move:
+                    response_data = {"move": move}
+                else:
+                    exception_msg = "Webhook returned no valid move"
+                    move = pick_random_move(session.engine, session.state)
+            except Exception as exc:
+                exception_msg = str(exc)
                 move = pick_random_move(session.engine, session.state)
+
+            # Persist decision log asynchronously (best-effort)
+            if ai_player.agent_id:
+                try:
+                    from app.models.decision_log import DecisionLog
+                    log_entry = DecisionLog(
+                        agent_id=ai_player.agent_id,
+                        match_id=session.match_id,
+                        turn_number=getattr(session.state, "_turn_number", 0),
+                        request_payload=payload,
+                        response_payload=response_data,
+                        exception=exception_msg,
+                    )
+                    db.add(log_entry)
+                    # Fire-and-forget flush; the outer db transaction commits this
+                    await db.flush()
+                except Exception:
+                    pass  # Logging must never crash the game
 
         # ── Uploaded script agent ──────────────────────────────────────────────
         elif getattr(ai_player, 'script_path', None):

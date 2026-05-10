@@ -12,6 +12,7 @@ import MatchHistory from './pages/MatchHistory';
 import Spectate from './pages/Spectate';
 import Agents from './pages/Agents';
 import AdminPanel from './pages/AdminPanel';
+import BulkSimulation from './pages/BulkSimulation';
 import ChatWidget from './components/ChatWidget';
 import './index.css';
 
@@ -46,6 +47,7 @@ function AppLayout() {
         <Route path="/spectate" element={<ProtectedRoute><Spectate /></ProtectedRoute>} />
         <Route path="/spectate/:gameId" element={<ProtectedRoute><Spectate /></ProtectedRoute>} />
         <Route path="/agents" element={<ProtectedRoute><Agents /></ProtectedRoute>} />
+        <Route path="/simulations" element={<ProtectedRoute><BulkSimulation /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
 
         {/* Catch-all */}

@@ -27,18 +27,20 @@
 }
 
 .chess-square.light {
-  background: #8B9BB4;
+  background: #454F41;
 }
 .chess-square.dark {
-  background: #5A6A82;
+  background: #043908;
 }
 
 /* Last move highlight */
 .chess-square.last-move.light {
-  background: #b8c87a;
+  background: #c1243b;
+  opacity: 0.8;
 }
 .chess-square.last-move.dark {
-  background: #8a9a5a;
+  background: #A71D31;
+  opacity: 0.8;
 }
 
 /* Selected piece */
