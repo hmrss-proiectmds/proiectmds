@@ -17,6 +17,7 @@ from app.schemas.auth import (
 from app.services.auth import (
     create_access_token,
     get_user_by_email,
+    get_user_by_username,
     register_user,
     verify_password,
 )
@@ -30,12 +31,20 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
     status_code=status.HTTP_201_CREATED,
 )
 async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
-    existing = await get_user_by_email(db, data.email)
-    if existing:
+    existing_email = await get_user_by_email(db, data.email)
+    if existing_email:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="A user with this email already exists.",
         )
+    
+    existing_user = await get_user_by_username(db, data.username)
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This username is already taken.",
+        )
+
     user = await register_user(db, data)
     return user
 
