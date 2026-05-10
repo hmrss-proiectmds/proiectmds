@@ -6,7 +6,7 @@
   left: 0;
   bottom: 0;
   width: var(--sidebar-width);
-  background: rgba(10, 14, 26, 0.92);
+  background: rgba(4, 25, 0, 0.95);
   backdrop-filter: blur(20px);
   border-right: 1px solid var(--color-border);
   z-index: 1000;
@@ -50,8 +50,10 @@
 }
 
 .navbar-title {
+  font-family: var(--font-header);
   font-size: var(--text-sm);
   letter-spacing: 0.03em;
+  font-weight: 800;
 }
 
 /* ── Links list ── */
