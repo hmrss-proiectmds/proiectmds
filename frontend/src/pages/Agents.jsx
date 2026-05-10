@@ -366,7 +366,7 @@ function AgentCard({ agent, onUpdated, onDeleted }) {
         {agent.in_game_id ? (
           <button
             className="btn btn-sm btn-accent agents-action-btn"
-            onClick={() => window.location.href = `/game/${agent.in_game_id}`}
+            onClick={() => window.location.href = `/spectate/${agent.in_game_id}`}
             title="Spectate the live match"
           >
             🔴 Spectate Match

@@ -109,12 +109,6 @@ async def _try_match(game_type: str, db: AsyncSession):
     await db.commit()
     log.info("Game %s created for matched pair", session.match_id)
 
-    # Re-queue if continuous
-    if e1.continuous:
-        _get_queue(game_type).append(e1)
-    if e2.continuous:
-        _get_queue(game_type).append(e2)
-
     # Kickstart AI if first turn belongs to an AI (e.g. AI vs AI match)
     import asyncio
     current_turn = session.engine.get_current_turn(session.state)

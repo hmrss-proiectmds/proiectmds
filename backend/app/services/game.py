@@ -580,6 +580,41 @@ class GameManager:
                         agent.elo_rating = new_elo
                         slot.elo_rating = new_elo
 
+        # ── Auto re-queue continuous agents ──
+        from app.models.agent import AgentStatus
+        from app.routers.matchmaking import _get_queue, _QueueEntry, _try_match
+        
+        re_queued_game_types = set()
+        for seat, slot in session.players.items():
+            if slot.is_ai and getattr(slot, "agent_id", None):
+                agent = await db.get(Agent, slot.agent_id)
+                if agent and agent.continuous_queue and agent.status == AgentStatus.active:
+                    q = _get_queue(agent.game_type)
+                    if not any(e.entity_id == agent.id for e in q):
+                        entry = _QueueEntry(
+                            entity_id=agent.id,
+                            username=agent.name,
+                            elo=agent.elo_rating,
+                            game_type=agent.game_type,
+                            is_agent=True,
+                            webhook_url=agent.webhook_url,
+                            script_path=agent.script_path,
+                            continuous=True,
+                        )
+                        q.append(entry)
+                        re_queued_game_types.add(agent.game_type)
+        
+        # Trigger matchmaking for any queues that got new agents
+        for game_type in re_queued_game_types:
+            import asyncio
+            async def run_matchmaking(t_game_type):
+                from app.database import async_session
+                try:
+                    async with async_session() as bg_db:
+                        await _try_match(t_game_type, bg_db)
+                except Exception as e:
+                    pass
+            asyncio.create_task(run_matchmaking(game_type))
 
 # Module-level singleton
 game_manager = GameManager()
