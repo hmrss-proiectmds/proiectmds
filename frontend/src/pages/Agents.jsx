@@ -270,11 +270,17 @@ function AgentCard({ agent, onUpdated, onDeleted }) {
     setQueueing(true);
     setQueueMsg('');
     try {
-      await api.post('/api/matchmaking/queue/agent', {
+      const res = await api.post('/api/matchmaking/queue/agent', {
         agent_id: agent.id,
         game_type: agent.game_type,
       });
-      setQueueMsg('In queue! ⚔️');
+      if (res.status === 'removed') {
+        onUpdated({ ...agent, in_queue: false });
+        setQueueMsg('Removed');
+      } else {
+        onUpdated({ ...agent, in_queue: true });
+        setQueueMsg('In queue! ⚔️');
+      }
       setTimeout(() => setQueueMsg(''), 3000);
     } catch (err) {
       setQueueMsg('Error');
@@ -357,14 +363,24 @@ function AgentCard({ agent, onUpdated, onDeleted }) {
       </div>
 
       <div className="agents-agent-actions">
-        <button
-          className="btn btn-sm btn-primary agents-action-btn"
-          onClick={handleEnqueue}
-          disabled={queueing || agent.status !== 'active'}
-          title="Send agent to matchmaking queue to fight another AI"
-        >
-          {queueMsg || '⚔️ Find Match'}
-        </button>
+        {agent.in_game_id ? (
+          <button
+            className="btn btn-sm btn-accent agents-action-btn"
+            onClick={() => window.location.href = `/game/${agent.in_game_id}`}
+            title="Spectate the live match"
+          >
+            🔴 Spectate Match
+          </button>
+        ) : (
+          <button
+            className={`btn btn-sm ${agent.in_queue ? 'btn-ghost' : 'btn-primary'} agents-action-btn`}
+            onClick={handleEnqueue}
+            disabled={queueing || agent.status !== 'active'}
+            title="Send agent to matchmaking queue or remove it"
+          >
+            {queueMsg || (agent.in_queue ? '❌ Unqueue' : '⚔️ Find Match')}
+          </button>
+        )}
 
         {/* Continuous queue toggle — only for webhook agents */}
         {agent.integration_mode === 'webhook' && (

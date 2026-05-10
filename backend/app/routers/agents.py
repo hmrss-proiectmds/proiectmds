@@ -55,6 +55,8 @@ class AgentResponse(BaseModel):
     status: str
     continuous_queue: bool
     created_at: str
+    in_game_id: Optional[str] = None
+    in_queue: bool = False
 
     @classmethod
     def from_orm(cls, a: Agent) -> "AgentResponse":
@@ -255,4 +257,28 @@ async def list_agents(
         select(Agent).where(Agent.owner_id == current_user.id).order_by(Agent.created_at.desc())
     )
     agents = result.scalars().all()
-    return [AgentResponse.from_orm(a) for a in agents]
+
+    from app.services.game import game_manager
+    from app.routers.matchmaking import _queues
+
+    responses = []
+    for a in agents:
+        resp = AgentResponse.from_orm(a)
+        
+        # Check if in queue
+        q = _queues.get(a.game_type, [])
+        resp.in_queue = any(e.entity_id == a.id for e in q)
+        
+        # Check if in an active game
+        for session in game_manager.sessions.values():
+            if session.status == "active":
+                for slot in session.players.values():
+                    if slot.is_ai and slot.agent_id == a.id:
+                        resp.in_game_id = str(session.match_id)
+                        break
+            if resp.in_game_id:
+                break
+                
+        responses.append(resp)
+
+    return responses
