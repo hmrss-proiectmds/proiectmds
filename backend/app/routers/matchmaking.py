@@ -40,6 +40,7 @@ class _QueueEntry:
         game_type: str,
         is_agent: bool = False,
         webhook_url: Optional[str] = None,
+        script_path: Optional[str] = None,
         continuous: bool = False,
     ):
         self.entity_id = entity_id
@@ -48,6 +49,7 @@ class _QueueEntry:
         self.game_type = game_type
         self.is_agent = is_agent
         self.webhook_url = webhook_url
+        self.script_path = script_path
         self.continuous = continuous
         self.joined_at = datetime.now(timezone.utc)
 
@@ -88,6 +90,7 @@ async def _try_match(game_type: str, db: AsyncSession):
         vs_ai=False,
         creator_is_agent=e1.is_agent,
         creator_webhook_url=e1.webhook_url,
+        creator_script_path=e1.script_path,
         creator_agent_id=e1.entity_id if e1.is_agent else None,
     )
 
@@ -100,33 +103,19 @@ async def _try_match(game_type: str, db: AsyncSession):
         player_elo=e2.elo,
         is_agent=e2.is_agent,
         webhook_url=e2.webhook_url,
+        script_path=e2.script_path,
         agent_id=e2.entity_id if e2.is_agent else None,
     )
     await db.commit()
     log.info("Game %s created for matched pair", session.match_id)
-
-    # Re-queue if continuous
-    if e1.continuous:
-        _get_queue(game_type).append(e1)
-    if e2.continuous:
-        _get_queue(game_type).append(e2)
 
     # Kickstart AI if first turn belongs to an AI (e.g. AI vs AI match)
     import asyncio
     current_turn = session.engine.get_current_turn(session.state)
     first_player = session.players.get(current_turn)
     if first_player and first_player.is_ai:
-        # Avoid circular dependencies or detached DB sessions by spawning a detached task
-        async def kickstart_ai():
-            from app.database import async_session
-            try:
-                # Provide a fresh DB session for the background task
-                async with async_session() as bg_db:
-                    await game_manager.make_ai_move(bg_db, session.match_id)
-                    await bg_db.commit()
-            except Exception as e:
-                log.error("Failed to kickstart AI match %s: %s", session.match_id, e)
-        asyncio.create_task(kickstart_ai())
+        from app.routers.games import _run_ai_loop
+        asyncio.create_task(_run_ai_loop(session.match_id))
 
 
 # ── Schemas ──────────────────────────────────────────────────────────────────
@@ -218,14 +207,15 @@ async def enqueue_agent(
         raise HTTPException(status_code=404, detail="Agent not found.")
     if agent.status != AgentStatus.active:
         raise HTTPException(status_code=400, detail="Agent is not active.")
-    if not agent.webhook_url:
-        raise HTTPException(status_code=400, detail="Agent has no webhook URL registered.")
+    if not agent.webhook_url and not agent.script_path:
+        raise HTTPException(status_code=400, detail="Agent has no webhook URL or script registered.")
 
     game_type = body.game_type.lower()
     q = _get_queue(game_type)
 
     if any(e.entity_id == agent.id for e in q):
-        raise HTTPException(status_code=409, detail="Agent is already in the queue.")
+        _remove_from_queue(agent.id, game_type)
+        return {"detail": "Agent removed from queue", "status": "removed"}
 
     entry = _QueueEntry(
         entity_id=agent.id,
@@ -234,6 +224,7 @@ async def enqueue_agent(
         game_type=game_type,
         is_agent=True,
         webhook_url=agent.webhook_url,
+        script_path=agent.script_path,
         continuous=agent.continuous_queue,
     )
     q.append(entry)

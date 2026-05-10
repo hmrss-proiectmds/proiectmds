@@ -28,6 +28,7 @@ class PlayerSlot:
     seat: int
     is_ai: bool = False
     webhook_url: Optional[str] = None   # set for registered webhook agents
+    script_path: Optional[str] = None   # set for uploaded script agents
     agent_id: Optional[uuid.UUID] = None  # DB agent id for registered agents
 
     def to_dict(self) -> dict:
@@ -97,6 +98,7 @@ class GameManager:
         max_players: int = 2,
         creator_is_agent: bool = False,
         creator_webhook_url: Optional[str] = None,
+        creator_script_path: Optional[str] = None,
         creator_agent_id: Optional[uuid.UUID] = None,
     ) -> GameSession:
         engine = get_engine(game_type)
@@ -122,6 +124,7 @@ class GameManager:
             seat=1,
             is_ai=creator_is_agent,
             webhook_url=creator_webhook_url,
+            script_path=creator_script_path,
             agent_id=creator_agent_id,
         )
 
@@ -189,6 +192,7 @@ class GameManager:
         player_elo: int,
         is_agent: bool = False,
         webhook_url: Optional[str] = None,
+        script_path: Optional[str] = None,
         agent_id: Optional[uuid.UUID] = None,
     ) -> GameSession:
         session = self.sessions.get(match_id)
@@ -210,6 +214,7 @@ class GameManager:
             seat=seat,
             is_ai=is_agent,
             webhook_url=webhook_url,
+            script_path=script_path,
             agent_id=agent_id,
         )
         session.players[seat] = joiner
@@ -364,7 +369,7 @@ class GameManager:
             return None
 
         # Visible pause so players can follow the action
-        await asyncio.sleep(1.0)
+        await asyncio.sleep(1.25)
 
         move: Optional[str] = None
 
@@ -373,7 +378,27 @@ class GameManager:
             from app.services.webhook import call_agent_webhook, build_webhook_payload
             payload = build_webhook_payload(session, current_turn)
             move = await call_agent_webhook(ai_player.webhook_url, payload)
-            # If webhook fails, fall back to random so the game doesn't stall
+            if not move:
+                move = pick_random_move(session.engine, session.state)
+
+        # ── Uploaded script agent ──────────────────────────────────────────────
+        elif getattr(ai_player, 'script_path', None):
+            import subprocess
+            import json
+            from app.services.webhook import build_webhook_payload
+            payload = build_webhook_payload(session, current_turn)
+            try:
+                proc = subprocess.run(
+                    ["python", ai_player.script_path],
+                    input=json.dumps(payload).encode('utf-8'),
+                    capture_output=True,
+                    timeout=5.0
+                )
+                if proc.returncode == 0:
+                    result = json.loads(proc.stdout)
+                    move = result.get("move")
+            except Exception:
+                pass
             if not move:
                 move = pick_random_move(session.engine, session.state)
 
@@ -387,7 +412,12 @@ class GameManager:
         else:
             move = pick_random_move(session.engine, session.state)
 
-        return await self.make_move(db, match_id, current_turn, move)
+        # Fallback to random if move is completely invalid so the loop never stalls
+        try:
+            return await self.make_move(db, match_id, current_turn, move)
+        except ValueError:
+            fallback = pick_random_move(session.engine, session.state)
+            return await self.make_move(db, match_id, current_turn, fallback)
 
     # ── Resign / Fold-out ──
 
@@ -550,6 +580,41 @@ class GameManager:
                         agent.elo_rating = new_elo
                         slot.elo_rating = new_elo
 
+        # ── Auto re-queue continuous agents ──
+        from app.models.agent import AgentStatus
+        from app.routers.matchmaking import _get_queue, _QueueEntry, _try_match
+        
+        re_queued_game_types = set()
+        for seat, slot in session.players.items():
+            if slot.is_ai and getattr(slot, "agent_id", None):
+                agent = await db.get(Agent, slot.agent_id)
+                if agent and agent.continuous_queue and agent.status == AgentStatus.active:
+                    q = _get_queue(agent.game_type)
+                    if not any(e.entity_id == agent.id for e in q):
+                        entry = _QueueEntry(
+                            entity_id=agent.id,
+                            username=agent.name,
+                            elo=agent.elo_rating,
+                            game_type=agent.game_type,
+                            is_agent=True,
+                            webhook_url=agent.webhook_url,
+                            script_path=agent.script_path,
+                            continuous=True,
+                        )
+                        q.append(entry)
+                        re_queued_game_types.add(agent.game_type)
+        
+        # Trigger matchmaking for any queues that got new agents
+        for game_type in re_queued_game_types:
+            import asyncio
+            async def run_matchmaking(t_game_type):
+                from app.database import async_session
+                try:
+                    async with async_session() as bg_db:
+                        await _try_match(t_game_type, bg_db)
+                except Exception as e:
+                    pass
+            asyncio.create_task(run_matchmaking(game_type))
 
 # Module-level singleton
 game_manager = GameManager()
