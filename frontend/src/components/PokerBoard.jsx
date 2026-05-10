@@ -4,16 +4,16 @@ import './PokerBoard.css';
 const SUIT_COLORS = { '♠': '#1e293b', '♣': '#1e293b', '♥': '#ef4444', '♦': '#ef4444' };
 
 const HAND_RANKINGS = [
-  { rank: 1, name: 'Royal Flush',     example: 'A♠ K♠ Q♠ J♠ T♠',     desc: 'A, K, Q, J, 10 of the same suit' },
-  { rank: 2, name: 'Straight Flush',  example: '9♥ 8♥ 7♥ 6♥ 5♥',     desc: 'Five sequential cards of the same suit' },
-  { rank: 3, name: 'Four of a Kind',  example: 'K♠ K♥ K♦ K♣ 3♠',     desc: 'Four cards of the same rank' },
-  { rank: 4, name: 'Full House',      example: 'J♠ J♥ J♦ 8♣ 8♠',     desc: 'Three of a kind + a pair' },
-  { rank: 5, name: 'Flush',           example: 'A♦ J♦ 8♦ 6♦ 2♦',     desc: 'Five cards of the same suit' },
-  { rank: 6, name: 'Straight',        example: 'T♠ 9♥ 8♦ 7♣ 6♠',     desc: 'Five sequential cards, any suit' },
-  { rank: 7, name: 'Three of a Kind', example: '7♠ 7♥ 7♦ K♣ 2♠',     desc: 'Three cards of the same rank' },
-  { rank: 8, name: 'Two Pair',        example: 'A♠ A♥ 9♦ 9♣ 4♠',     desc: 'Two different pairs' },
-  { rank: 9, name: 'One Pair',        example: 'Q♠ Q♥ 8♦ 5♣ 3♠',     desc: 'Two cards of the same rank' },
-  { rank: 10, name: 'High Card',      example: 'A♠ J♥ 8♦ 5♣ 2♠',     desc: 'No matching cards' },
+  { rank: 1, name: 'Royal Flush', example: 'A♠ K♠ Q♠ J♠ T♠', desc: 'A, K, Q, J, 10 of the same suit' },
+  { rank: 2, name: 'Straight Flush', example: '9♥ 8♥ 7♥ 6♥ 5♥', desc: 'Five sequential cards of the same suit' },
+  { rank: 3, name: 'Four of a Kind', example: 'K♠ K♥ K♦ K♣ 3♠', desc: 'Four cards of the same rank' },
+  { rank: 4, name: 'Full House', example: 'J♠ J♥ J♦ 8♣ 8♠', desc: 'Three of a kind + a pair' },
+  { rank: 5, name: 'Flush', example: 'A♦ J♦ 8♦ 6♦ 2♦', desc: 'Five cards of the same suit' },
+  { rank: 6, name: 'Straight', example: 'T♠ 9♥ 8♦ 7♣ 6♠', desc: 'Five sequential cards, any suit' },
+  { rank: 7, name: 'Three of a Kind', example: '7♠ 7♥ 7♦ K♣ 2♠', desc: 'Three cards of the same rank' },
+  { rank: 8, name: 'Two Pair', example: 'A♠ A♥ 9♦ 9♣ 4♠', desc: 'Two different pairs' },
+  { rank: 9, name: 'One Pair', example: 'Q♠ Q♥ 8♦ 5♣ 3♠', desc: 'Two cards of the same rank' },
+  { rank: 10, name: 'High Card', example: 'A♠ J♥ 8♦ 5♣ 2♠', desc: 'No matching cards' },
 ];
 
 const ACTION_ICONS = {
@@ -279,8 +279,7 @@ export default function PokerBoard({
           {simpleActions.map((a) => (
             <button
               key={a}
-              className={`btn poker-action-btn ${
-                a === 'FOLD'
+              className={`btn poker-action-btn ${a === 'FOLD'
                   ? 'poker-btn-fold'
                   : a === 'CALL'
                     ? 'poker-btn-call'
@@ -289,7 +288,7 @@ export default function PokerBoard({
                       : a === 'ALLIN'
                         ? 'poker-btn-allin'
                         : 'btn-secondary'
-              }`}
+                }`}
               onClick={() => handleAction(a)}
             >
               <span className="action-btn-icon">{ACTION_ICONS[a]}</span>

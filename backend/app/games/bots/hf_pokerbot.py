@@ -31,7 +31,7 @@ def _get_pipeline():
             _PIPELINE = pipeline(
                 "text-generation",
                 model=_MODEL_NAME,
-                device=-1,  # CPU only for lightweight inference
+                device=-1,  # CPU only
             )
             print("[PokerBot] Model loaded successfully.")
     return _PIPELINE
@@ -88,6 +88,7 @@ def pick_hf_poker_move(engine: GameEngine, state: GameState) -> str:
             num_return_sequences=1,
             do_sample=True,
             temperature=0.7,
+            pad_token_id=pipe.tokenizer.eos_token_id,
         )
         generated = output[0]["generated_text"][len(prompt):].strip().upper()
 

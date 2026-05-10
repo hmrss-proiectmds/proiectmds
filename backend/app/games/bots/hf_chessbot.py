@@ -35,21 +35,38 @@ def _load_model():
     if _model is not None:
         return _model, _device
 
-    if not MODEL_DIR.exists():
-        raise FileNotFoundError(
-            f"ChessBot model not found at {MODEL_DIR}. "
-            "Run: python -c \"from huggingface_hub import snapshot_download; "
-            "snapshot_download('Maxlegrec/ChessBot', local_dir='models/chessbot')\""
-        )
+    from transformers import AutoConfig, AutoModel
+    import torch
+    
+    logger.info("Loading ChessBot model manually from %s ...", MODEL_DIR)
+    
+    _device = "cpu"
+    
+    try:
+        config = AutoConfig.from_pretrained(str(MODEL_DIR), trust_remote_code=True)
+        _model = AutoModel.from_config(config, trust_remote_code=True)
+        
+        # Monkeypatch the missing attribute that causes the crash in some transformers versions
+        if not hasattr(_model, 'all_tied_weights_keys'):
+            _model.all_tied_weights_keys = {}
 
-    from transformers import AutoModel
+        # Find the weight file
+        weight_file = MODEL_DIR / "model.safetensors"
+        if weight_file.exists():
+            from safetensors.torch import load_file
+            state_dict = load_file(str(weight_file))
+        else:
+            weight_file = MODEL_DIR / "pytorch_model.bin"
+            state_dict = torch.load(str(weight_file), map_location="cpu")
+            
+        _model.load_state_dict(state_dict, strict=False)
+        _model.to(_device)
+        _model.eval()
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise e
 
-    logger.info("Loading ChessBot model from %s ...", MODEL_DIR)
-    _device = "cuda" if torch.cuda.is_available() else "cpu"
-    _model = AutoModel.from_pretrained(
-        str(MODEL_DIR), trust_remote_code=True
-    ).to(_device)
-    _model.eval()
     logger.info("ChessBot loaded on %s", _device)
     return _model, _device
 

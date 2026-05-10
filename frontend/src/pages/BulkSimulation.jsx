@@ -333,19 +333,23 @@ export default function BulkSimulation() {
                       </tr>
                     </thead>
                     <tbody>
-                      {(result.games || []).map((g, i) => (
-                        <tr key={i} className={g.winner?.includes('player1') ? 'row-a' : g.winner?.includes('player2') ? 'row-b' : ''}>
-                          <td className="font-mono">{i + 1}</td>
-                          <td>
-                            <span className={`badge badge-${g.winner?.includes('player1') ? 'accent' : g.winner?.includes('player2') ? 'secondary' : 'success'}`}>
-                              {g.winner === 'player1_win' ? 'Bot A' : g.winner === 'player2_win' ? 'Bot B' : g.winner}
-                            </span>
-                          </td>
-                          <td className="text-muted">{g.reason}</td>
-                          <td className="font-mono">{g.turns}</td>
-                          <td className="font-mono text-muted">{g.duration_ms}ms</td>
-                        </tr>
-                      ))}
+                      {(result.games || []).map((g, i) => {
+                        const isWinA = g.winner === 'player1_win';
+                        const isWinB = g.winner?.startsWith('player') && g.winner !== 'player1_win';
+                        return (
+                          <tr key={i} className={isWinA ? 'row-a' : isWinB ? 'row-b' : ''}>
+                            <td className="font-mono">{i + 1}</td>
+                            <td>
+                              <span className={`badge badge-${isWinA ? 'accent' : isWinB ? 'secondary' : 'success'}`}>
+                                {isWinA ? 'Bot A' : isWinB ? 'Bot B' : g.winner}
+                              </span>
+                            </td>
+                            <td className="text-muted">{g.reason}</td>
+                            <td className="font-mono">{g.turns}</td>
+                            <td className="font-mono text-muted">{g.duration_ms}ms</td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
