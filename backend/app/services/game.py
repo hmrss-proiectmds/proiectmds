@@ -464,7 +464,7 @@ class GameManager:
             winner = other_seats[0]  # first remaining player
 
         result_key = f"player{winner}_win"
-        terminal = {"result": result_key, "reason": "resignation"}
+        terminal = {"result": result_key, "reason": "resignation", "winner_seat": winner}
         session.status = "finished"
         session.result = terminal
         await self._finalize_match(db, session, terminal)
