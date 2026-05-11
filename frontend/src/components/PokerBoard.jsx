@@ -52,7 +52,7 @@ function CardBack() {
 /** Parse a log entry like "Seat 3: RAISE $50" into structured data */
 function parseLogEntry(entry) {
   const match = entry.match(/^Seat (\d+): (.+)$/);
-  if (!match) return { seat: 0, action: entry, amount: null };
+  if (!match) return { seat: null, action: entry, amount: null };
   const seat = parseInt(match[1], 10);
   const rest = match[2];
   const parts = rest.split(' ');
@@ -90,6 +90,13 @@ export default function PokerBoard({
     if (actionLog.length > prevLogLen.current) {
       const latest = actionLog[actionLog.length - 1];
       const parsed = parseLogEntry(latest);
+
+      // Don't flash system announcements as player actions
+      if (parsed.seat === null) {
+        prevLogLen.current = actionLog.length;
+        return;
+      }
+
       const player = players.find((p) => p.seat === parsed.seat);
       setFlashAction({
         ...parsed,
@@ -341,8 +348,18 @@ export default function PokerBoard({
           <div className="feed-entries">
             {actionLog.slice(-10).map((entry, i) => {
               const p = parseLogEntry(entry);
-              const player = players.find((pl) => pl.seat === p.seat);
               const isLatest = i === Math.min(actionLog.length, 10) - 1;
+
+              if (p.seat === null) {
+                return (
+                  <div key={i} className={`feed-entry feed-entry-system ${isLatest ? 'feed-entry-latest' : ''}`}>
+                    <span className="feed-icon">📢</span>
+                    <span className="feed-system-text">{p.action}</span>
+                  </div>
+                );
+              }
+
+              const player = players.find((pl) => pl.seat === p.seat);
               return (
                 <div key={i} className={`feed-entry ${isLatest ? 'feed-entry-latest' : ''}`}>
                   <span className="feed-icon">{player?.is_ai ? '🤖' : '👤'}</span>
