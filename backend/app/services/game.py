@@ -414,12 +414,22 @@ class GameManager:
             import json
             from app.services.webhook import build_webhook_payload
             payload = build_webhook_payload(session, current_turn)
+            from pathlib import Path
+            abs_script_path = str(Path(ai_player.script_path).resolve())
             try:
+                # Run in a restricted Docker sandbox
                 proc = subprocess.run(
-                    ["python", ai_player.script_path],
+                    [
+                        "docker", "run", "--rm", "-i",
+                        "--network", "none",
+                        "--memory", "128m",
+                        "--cpus", "0.5",
+                        "-v", f"{abs_script_path}:/home/sandboxuser/agent.py",
+                        "ai-sandbox"
+                    ],
                     input=json.dumps(payload).encode('utf-8'),
                     capture_output=True,
-                    timeout=5.0
+                    timeout=7.0  # Slightly longer timeout for docker startup
                 )
                 if proc.returncode == 0:
                     result = json.loads(proc.stdout)

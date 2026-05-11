@@ -1,0 +1,13 @@
+# backend/Dockerfile.sandbox
+FROM python:3.11-slim
+
+# Create a non-privileged user
+RUN useradd -m sandboxuser
+USER sandboxuser
+
+WORKDIR /home/sandboxuser
+
+# The script will be mounted at /home/sandboxuser/agent.py
+# and the payload will be piped to stdin.
+
+CMD ["python", "agent.py"]
