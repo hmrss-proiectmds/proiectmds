@@ -17,6 +17,7 @@ const NAV_ITEMS = [
   { to: '/leaderboard', label: 'Leaderboard',  icon: '🏆' },
   { to: '/history',     label: 'History',      icon: '📜' },
   { to: '/spectate',    label: 'Spectate',     icon: '👁️' },
+  { to: '/about',       label: 'About',        icon: 'ℹ️' },
 ];
 
 export default function Navbar() {

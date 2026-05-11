@@ -13,6 +13,7 @@ import Spectate from './pages/Spectate';
 import Agents from './pages/Agents';
 import AdminPanel from './pages/AdminPanel';
 import BulkSimulation from './pages/BulkSimulation';
+import About from './pages/About';
 import ChatWidget from './components/ChatWidget';
 import './index.css';
 
@@ -49,6 +50,7 @@ function AppLayout() {
         <Route path="/agents" element={<ProtectedRoute><Agents /></ProtectedRoute>} />
         <Route path="/simulations" element={<ProtectedRoute><BulkSimulation /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
+        <Route path="/about" element={<About />} />
 
         {/* Catch-all */}
         <Route path="*" element={<Navigate to="/" replace />} />
