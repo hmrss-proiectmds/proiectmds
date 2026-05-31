@@ -26,7 +26,7 @@ from app.main import app as fastapi_app
 # ── DB lifecycle ──────────────────────────────────────────────────────────────
 
 
-@pytest_asyncio.fixture(scope="session", autouse=True)
+@pytest_asyncio.fixture(scope="session", autouse=True, loop_scope="session")
 async def setup_database():
     """Create all tables at session start; drop at session end."""
     async with engine.begin() as conn:
@@ -42,8 +42,9 @@ async def setup_database():
 
 
 @pytest_asyncio.fixture
-async def http(setup_database):
-    """Unauthenticated async HTTP client wired directly to the FastAPI app."""
+async def http():
+    """Unauthenticated async HTTP client wired directly to the FastAPI app.
+    setup_database runs automatically via autouse=True before any test."""
     async with AsyncClient(
         transport=ASGITransport(app=fastapi_app), base_url="http://test"
     ) as ac:
