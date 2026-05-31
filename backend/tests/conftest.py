@@ -63,7 +63,7 @@ async def register_user(http: AsyncClient, role: str) -> tuple[str, str, str]:
     reg = await http.post(
         "/api/auth/register",
         json={
-            "email": f"{uid}@test.invalid",
+            "email": f"{uid}@example.com",
             "username": uid,
             "password": "TestPass123!",
             "role": role,
@@ -73,7 +73,7 @@ async def register_user(http: AsyncClient, role: str) -> tuple[str, str, str]:
 
     login = await http.post(
         "/api/auth/login",
-        json={"email": f"{uid}@test.invalid", "password": "TestPass123!"},
+        json={"email": f"{uid}@example.com", "password": "TestPass123!"},
     )
     assert login.status_code == 200, f"Login failed ({role}): {login.text}"
 

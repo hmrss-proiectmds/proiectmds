@@ -38,7 +38,7 @@ class TestRegister:
         import uuid
         uid = uuid.uuid4().hex[:10]
         resp = await http.post("/api/auth/register", json={
-            "email": f"{uid}@test.invalid",
+            "email": f"{uid}@example.com",
             "username": uid,
             "password": "TestPass123!",
             "role": "human_player",
@@ -65,14 +65,14 @@ class TestRegister:
         import uuid
         uid = uuid.uuid4().hex[:10]
         payload = {
-            "email": f"{uid}@test.invalid",
+            "email": f"{uid}@example.com",
             "username": uid,
             "password": "TestPass123!",
             "role": "human_player",
         }
         await http.post("/api/auth/register", json=payload)
         payload2 = dict(payload)
-        payload2["email"] = f"{uid}b@test.invalid"
+        payload2["email"] = f"{uid}b@example.com"
         resp = await http.post("/api/auth/register", json=payload2)
         assert resp.status_code == 409
 
@@ -80,7 +80,7 @@ class TestRegister:
         import uuid
         uid = uuid.uuid4().hex[:10]
         resp = await http.post("/api/auth/register", json={
-            "email": f"{uid}@test.invalid",
+            "email": f"{uid}@example.com",
             "username": uid,
             "password": "short",
             "role": "human_player",
@@ -91,7 +91,7 @@ class TestRegister:
         import uuid
         uid = uuid.uuid4().hex[:10]
         resp = await http.post("/api/auth/register", json={
-            "email": f"{uid}@test.invalid",
+            "email": f"{uid}@example.com",
             "username": uid,
             "password": "TestPass123!",
             "role": "superuser",  # does not exist
@@ -104,13 +104,13 @@ class TestLogin:
         import uuid
         uid = uuid.uuid4().hex[:10]
         await http.post("/api/auth/register", json={
-            "email": f"{uid}@test.invalid",
+            "email": f"{uid}@example.com",
             "username": uid,
             "password": "TestPass123!",
             "role": "human_player",
         })
         resp = await http.post("/api/auth/login", json={
-            "email": f"{uid}@test.invalid",
+            "email": f"{uid}@example.com",
             "password": "TestPass123!",
         })
         assert resp.status_code == 200
@@ -120,13 +120,13 @@ class TestLogin:
         import uuid
         uid = uuid.uuid4().hex[:10]
         await http.post("/api/auth/register", json={
-            "email": f"{uid}@test.invalid",
+            "email": f"{uid}@example.com",
             "username": uid,
             "password": "TestPass123!",
             "role": "human_player",
         })
         resp = await http.post("/api/auth/login", json={
-            "email": f"{uid}@test.invalid",
+            "email": f"{uid}@example.com",
             "password": "WrongPassword!",
         })
         assert resp.status_code == 401
