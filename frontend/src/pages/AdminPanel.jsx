@@ -75,6 +75,21 @@ export default function AdminPanel() {
     }
   };
 
+  const banUser = async (userId, username) => {
+    if (!window.confirm(`Ban user "${username}"? They will be locked out immediately.`)) return;
+    setActionMsg('');
+    try {
+      const data = await fetch(`/api/admin/users/${userId}/ban`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${getToken()}` },
+      }).then(r => r.json());
+      setActionMsg(data.detail || 'User banned.');
+      load();
+    } catch (err) {
+      setActionMsg(err.message);
+    }
+  };
+
   if (user?.role !== 'admin') {
     return (
       <div className="page-container">
@@ -142,6 +157,7 @@ export default function AdminPanel() {
                     <th>Role</th>
                     <th className="text-right">ELO</th>
                     <th>Joined</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -149,9 +165,27 @@ export default function AdminPanel() {
                     <tr key={u.id}>
                       <td className="font-bold">{u.username}</td>
                       <td className="text-muted">{u.email}</td>
-                      <td><span className="badge">{u.role}</span></td>
+                      <td>
+                        <span className={`badge ${u.role === 'banned' ? 'badge-error' : u.role === 'admin' ? 'badge-accent' : ''}`}>
+                          {u.role}
+                        </span>
+                      </td>
                       <td className="text-right font-mono">{u.elo_rating}</td>
                       <td className="text-muted">{timeAgo(u.created_at)}</td>
+                      <td>
+                        {u.role !== 'banned' && u.role !== 'admin' && (
+                          <button
+                            className="btn btn-sm"
+                            style={{ fontSize: '0.75rem', background: 'rgba(239,68,68,0.12)', color: '#ef4444' }}
+                            onClick={() => banUser(u.id, u.username)}
+                          >
+                            🚫 Ban
+                          </button>
+                        )}
+                        {u.role === 'banned' && (
+                          <span className="text-muted" style={{ fontSize: '0.78rem' }}>Banned</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

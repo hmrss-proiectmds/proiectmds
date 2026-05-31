@@ -29,6 +29,13 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     CORS_ORIGINS: str = "http://localhost:5173"
 
+    # ── Email (optional — leave blank to disable email sending) ──
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM: str = "noreply@gameplatform.local"
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]

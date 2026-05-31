@@ -17,16 +17,16 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from app.dependencies.auth import get_current_user
-from app.models.user import User
+from app.dependencies.auth import get_current_user, require_role
+from app.models.user import User, UserRole
 
 router = APIRouter(prefix="/api/simulations", tags=["simulations"])
 
 # ── In-memory store: sim_id → {owner_id, task_id, meta} ──────────────────────
 _simulations: dict[str, dict] = {}
 
-VALID_GAME_TYPES = {"chess", "poker"}
-VALID_BOT_TYPES  = {"random", "chessbot", "pokerbot"}
+VALID_GAME_TYPES = {"chess", "poker", "mahjong"}
+VALID_BOT_TYPES  = {"random", "chessbot", "pokerbot", "mahjongbot"}
 MAX_GAMES = 200
 
 
@@ -77,7 +77,7 @@ def _get_task_status(task_id: str) -> dict:
 @router.post("", status_code=status.HTTP_202_ACCEPTED, response_model=SimulationStatusResponse)
 async def start_simulation(
     body: StartSimulationRequest,
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_role(UserRole.ai_developer, UserRole.admin)),
 ):
     """
     Enqueue a bulk simulation job.

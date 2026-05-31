@@ -9,11 +9,18 @@ const roleLabels = {
   admin: '🛡️ Admin',
 };
 
+// roles that can register or manage agents
+const AGENT_ROLES = new Set(['ai_developer', 'ai_agent_owner', 'admin']);
+// roles that can run bulk simulations
+const SIM_ROLES   = new Set(['ai_developer', 'admin']);
+
 const NAV_ITEMS = [
   { to: '/',            label: 'Dashboard',   icon: '⊞' },
   { to: '/play',        label: 'Play',         icon: '▶', className: 'nav-link-play' },
-  { to: '/agents',      label: 'Agents',       icon: '🤖' },
-  { to: '/simulations', label: 'Simulate',     icon: '⚡' },
+  { to: '/agents',      label: 'Agents',       icon: '🤖', roles: AGENT_ROLES },
+  { to: '/simulations', label: 'Simulate',     icon: '⚡', roles: SIM_ROLES },
+  { to: '/developer',   label: 'Dev Tools',    icon: '🔬', roles: SIM_ROLES },
+  { to: '/owner',       label: 'Fleet',        icon: '🛰️', roles: new Set(['ai_agent_owner', 'admin']) },
   { to: '/leaderboard', label: 'Leaderboard',  icon: '🏆' },
   { to: '/history',     label: 'History',      icon: '📜' },
   { to: '/spectate',    label: 'Spectate',     icon: '👁️' },
@@ -43,8 +50,8 @@ export default function Navbar() {
           <>
             {/* Nav links */}
             <div className="navbar-links">
-              {NAV_ITEMS.map(({ to, label, icon, className }) => {
-                if (to === '/admin' && user.role !== 'admin') return null;
+              {NAV_ITEMS.map(({ to, label, icon, className, roles }) => {
+                if (roles && !roles.has(user.role)) return null;
                 const isActive = location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
                 return (
                   <Link

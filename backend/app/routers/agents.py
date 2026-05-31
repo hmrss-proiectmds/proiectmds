@@ -79,7 +79,9 @@ class AgentResponse(BaseModel):
 @router.post("/register-webhook", status_code=status.HTTP_201_CREATED, response_model=AgentResponse)
 async def register_webhook_agent(
     body: RegisterWebhookRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        require_role(UserRole.ai_developer, UserRole.ai_agent_owner, UserRole.admin)
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -324,14 +326,15 @@ async def get_agent_logs(
     rows = await db.execute(query)
     logs = rows.scalars().all()
 
+    full_detail = current_user.role in (UserRole.ai_developer, UserRole.admin)
     return [
         {
             "id": str(log.id),
             "agent_id": str(log.agent_id),
             "match_id": str(log.match_id),
             "turn_number": log.turn_number,
-            "request_payload": log.request_payload,
-            "response_payload": log.response_payload,
+            "request_payload": log.request_payload if full_detail else None,
+            "response_payload": log.response_payload if full_detail else None,
             "exception": log.exception,
             "logged_at": log.logged_at.isoformat(),
         }

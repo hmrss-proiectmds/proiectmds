@@ -42,14 +42,16 @@ class PlayerSlot:
 
 
 # Bot type constants
-BOT_RANDOM = "random"
-BOT_CHESSBOT = "chessbot"
-BOT_POKERBOT = "pokerbot"
+BOT_RANDOM    = "random"
+BOT_CHESSBOT  = "chessbot"
+BOT_POKERBOT  = "pokerbot"
+BOT_MAHJONGBOT = "mahjongbot"
 
 BOT_INFO = {
-    BOT_RANDOM: {"name": "Random Bot 🎲", "elo": 400},
-    BOT_CHESSBOT: {"name": "ChessBot AI 🧠", "elo": 1500},
-    BOT_POKERBOT: {"name": "PokerBot AI 🤖", "elo": 1200},
+    BOT_RANDOM:     {"name": "Random Bot 🎲",    "elo": 400},
+    BOT_CHESSBOT:   {"name": "ChessBot AI 🧠",   "elo": 1500},
+    BOT_POKERBOT:   {"name": "PokerBot AI 🤖",   "elo": 1200},
+    BOT_MAHJONGBOT: {"name": "MahjongBot AI 🀄", "elo": 1200},
 }
 
 
@@ -103,9 +105,11 @@ class GameManager:
     ) -> GameSession:
         engine = get_engine(game_type)
 
-        # For poker, enforce 3-7 players; for chess, always 2
+        # Enforce per-game player limits
         if game_type == "poker":
             max_seats = max(3, min(7, max_players))
+        elif game_type == "mahjong":
+            max_seats = 4
         else:
             max_seats = 2
 
@@ -446,6 +450,9 @@ class GameManager:
         elif session.bot_type == BOT_POKERBOT:
             from app.games.bots.hf_pokerbot import pick_hf_poker_move
             move = pick_hf_poker_move(session.engine, session.state)
+        elif session.bot_type == BOT_MAHJONGBOT:
+            from app.games.bots.hf_mahjongbot import pick_hf_mahjong_move
+            move = pick_hf_mahjong_move(session.engine, session.state)
         else:
             move = pick_random_move(session.engine, session.state)
 

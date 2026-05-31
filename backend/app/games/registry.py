@@ -31,5 +31,8 @@ def _bootstrap() -> None:
     from app.games.poker.engine import PokerEngine
     register_engine(PokerEngine())
 
+    from app.games.mahjong.engine import MahjongEngine
+    register_engine(MahjongEngine())
+
 
 _bootstrap()

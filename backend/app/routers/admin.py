@@ -8,9 +8,10 @@ Endpoints:
   POST /api/admin/agents/{id}/pause         — pause an agent
   POST /api/admin/agents/{id}/unpause       — unpause an agent
   POST /api/admin/agents/{id}/ban           — ban an agent
-  POST /api/admin/users/{id}/ban            — ban a user account (set role to 'banned')
+  POST /api/admin/users/{id}/ban            — ban a user account (sets role to 'banned')
 """
 
+import asyncio
 import uuid
 from datetime import datetime
 from typing import Optional
@@ -25,6 +26,7 @@ from app.dependencies.auth import require_role
 from app.models.agent import Agent, AgentStatus
 from app.models.match import Match
 from app.models.user import User, UserRole
+from app.services.email import send_moderation_alert
 from app.services.game import game_manager
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -145,6 +147,11 @@ async def _get_agent_or_404(agent_id: uuid.UUID, db: AsyncSession) -> Agent:
     return agent
 
 
+async def _owner_email(agent: Agent, db: AsyncSession) -> str:
+    owner = await db.get(User, agent.owner_id)
+    return owner.email if owner else ""
+
+
 @router.post("/agents/{agent_id}/pause", status_code=200)
 async def pause_agent(
     agent_id: uuid.UUID,
@@ -156,7 +163,11 @@ async def pause_agent(
     if agent.status == AgentStatus.banned:
         raise HTTPException(status_code=400, detail="Cannot pause a banned agent.")
     agent.status = AgentStatus.paused
+    email = await _owner_email(agent, db)
+    agent_name = agent.name
     await db.commit()
+    if email:
+        asyncio.create_task(send_moderation_alert(email, agent_name, "pause"))
     return {"detail": "Agent paused", "agent_id": str(agent_id)}
 
 
@@ -171,7 +182,11 @@ async def unpause_agent(
     if agent.status == AgentStatus.banned:
         raise HTTPException(status_code=400, detail="Cannot unpause a banned agent.")
     agent.status = AgentStatus.active
+    email = await _owner_email(agent, db)
+    agent_name = agent.name
     await db.commit()
+    if email:
+        asyncio.create_task(send_moderation_alert(email, agent_name, "unpause"))
     return {"detail": "Agent unpaused", "agent_id": str(agent_id)}
 
 
@@ -184,8 +199,43 @@ async def ban_agent(
     """Permanently ban an agent — removes it from all queues."""
     agent = await _get_agent_or_404(agent_id, db)
     agent.status = AgentStatus.banned
+    email = await _owner_email(agent, db)
+    agent_name = agent.name
     await db.commit()
+    if email:
+        asyncio.create_task(send_moderation_alert(email, agent_name, "ban"))
     return {"detail": "Agent banned", "agent_id": str(agent_id)}
+
+
+@router.post("/users/{user_id}/ban", status_code=200)
+async def ban_user(
+    user_id: uuid.UUID,
+    admin: User = Depends(_admin_dep),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Ban a user account — sets their role to 'banned', blocking future logins.
+    Also removes the user from any active matchmaking queues.
+    Cannot ban another admin account.
+    """
+    target = await db.get(User, user_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found.")
+    if target.id == admin.id:
+        raise HTTPException(status_code=400, detail="You cannot ban your own account.")
+    if target.role == UserRole.admin:
+        raise HTTPException(status_code=400, detail="Admin accounts cannot be banned.")
+    if target.role == UserRole.banned:
+        raise HTTPException(status_code=400, detail="User is already banned.")
+
+    target.role = UserRole.banned
+
+    # Remove from any matchmaking queues
+    from app.routers.matchmaking import remove_entity_globally
+    remove_entity_globally(user_id)
+
+    await db.commit()
+    return {"detail": "User banned", "user_id": str(user_id), "username": target.username}
 
 
 @router.get("/active-games")

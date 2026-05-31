@@ -13,6 +13,8 @@ import Spectate from './pages/Spectate';
 import Agents from './pages/Agents';
 import AdminPanel from './pages/AdminPanel';
 import BulkSimulation from './pages/BulkSimulation';
+import DeveloperDashboard from './pages/DeveloperDashboard';
+import AgentOwnerHub from './pages/AgentOwnerHub';
 import About from './pages/About';
 import ChatWidget from './components/ChatWidget';
 import './index.css';
@@ -49,6 +51,8 @@ function AppLayout() {
         <Route path="/spectate/:gameId" element={<ProtectedRoute><Spectate /></ProtectedRoute>} />
         <Route path="/agents" element={<ProtectedRoute><Agents /></ProtectedRoute>} />
         <Route path="/simulations" element={<ProtectedRoute><BulkSimulation /></ProtectedRoute>} />
+        <Route path="/developer" element={<ProtectedRoute><DeveloperDashboard /></ProtectedRoute>} />
+        <Route path="/owner" element={<ProtectedRoute><AgentOwnerHub /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
         <Route path="/about" element={<About />} />
 

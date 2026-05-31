@@ -5,8 +5,21 @@ import { api } from '../api/client';
 import './GameLobby.css';
 
 const GAME_TYPE_INFO = {
-  chess: { icon: '♟️', name: 'Chess', players: '2 players' },
-  poker: { icon: '🃏', name: 'Poker', players: '3-7 players' },
+  chess:   { icon: '♟️', name: 'Chess',   players: '2 players'  },
+  poker:   { icon: '🃏', name: 'Poker',   players: '3-7 players' },
+  mahjong: { icon: '🀄', name: 'Mahjong', players: '4 players'  },
+};
+
+const HF_BOT_TYPE = {
+  chess:   'chessbot',
+  poker:   'pokerbot',
+  mahjong: 'mahjongbot',
+};
+
+const HF_BOT_LABEL = {
+  chess:   'ChessBot',
+  poker:   'PokerBot',
+  mahjong: 'MahjongBot',
 };
 
 export default function GameLobby() {
@@ -44,7 +57,7 @@ export default function GameLobby() {
         game_type: gameType,
         vs_ai: vsAi,
         bot_type: botType,
-        max_players: gameType === 'poker' ? maxPlayers : 2,
+        max_players: gameType === 'poker' ? maxPlayers : gameType === 'mahjong' ? 4 : 2,
       });
       navigate(`/game/${game.game_id}`);
     } catch (err) {
@@ -80,7 +93,8 @@ export default function GameLobby() {
     }
   };
 
-  const isPoker = gameType === 'poker';
+  const isPoker   = gameType === 'poker';
+  const isMahjong = gameType === 'mahjong';
 
   return (
     <div className="page-container animate-fade-in">
@@ -138,7 +152,11 @@ export default function GameLobby() {
             <div>
               <div className="lobby-btn-title">Play vs Humans</div>
               <div className="lobby-btn-desc">
-                Create a lobby and wait for {isPoker ? `${maxPlayers - 1} players` : 'an opponent'}
+                {isPoker
+                  ? `Create a lobby for ${maxPlayers - 1} more players`
+                  : isMahjong
+                    ? 'Create a lobby for 3 more players'
+                    : 'Create a lobby and wait for an opponent'}
               </div>
             </div>
           </button>
@@ -157,16 +175,16 @@ export default function GameLobby() {
           </button>
           <button
             className="btn btn-lg lobby-create-btn lobby-btn-hf"
-            onClick={() => handleCreate(true, isPoker ? 'pokerbot' : 'chessbot')}
+            onClick={() => handleCreate(true, HF_BOT_TYPE[gameType] || 'random')}
             disabled={creating}
           >
             <span className="lobby-btn-icon">🧠</span>
             <div>
               <div className="lobby-btn-title">
-                Play vs {isPoker ? 'PokerBot' : 'ChessBot'} AI
+                Play vs {HF_BOT_LABEL[gameType] || 'AI'} Bot
               </div>
               <div className="lobby-btn-desc">
-                HuggingFace-powered intelligent {isPoker ? 'poker' : 'chess'} agent
+                HuggingFace-powered intelligent agent
               </div>
             </div>
           </button>
@@ -238,10 +256,7 @@ export default function GameLobby() {
                         <button
                           className="btn btn-sm lobby-btn-hf-sm"
                           onClick={() =>
-                            handleAddAi(
-                              game.game_id,
-                              game.game_type === 'poker' ? 'pokerbot' : 'chessbot'
-                            )
+                            handleAddAi(game.game_id, HF_BOT_TYPE[game.game_type] || 'random')
                           }
                           disabled={loading}
                           title="Add a HuggingFace AI bot"

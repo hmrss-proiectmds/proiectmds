@@ -1,0 +1,302 @@
+/* ── MahjongBoard layout ─────────────────────────────────────────────── */
+
+.mj-board {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+/* ── Tile base ───────────────────────────────────────────────────────── */
+
+.mj-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 48px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+  cursor: pointer;
+  border: 2px solid transparent;
+  user-select: none;
+  transition: transform 0.1s, box-shadow 0.1s, border-color 0.1s;
+  background: var(--color-surface, #1e1e2e);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+}
+
+.mj-tile:hover:not(.mj-tile--disabled):not(.mj-tile--back) {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.5);
+}
+
+.mj-tile--selected {
+  transform: translateY(-8px);
+  border-color: var(--color-primary, #6366f1);
+  box-shadow: 0 8px 16px rgba(99,102,241,0.5);
+}
+
+.mj-tile--last {
+  margin-left: 8px;
+  border-color: rgba(99,102,241,0.3);
+}
+
+.mj-tile--disabled { cursor: default; opacity: 0.7; }
+
+/* Suit colours */
+.mj-tile--man   { color: #ef4444; }
+.mj-tile--pin   { color: #3b82f6; }
+.mj-tile--sou   { color: #22c55e; }
+.mj-tile--honor { color: #a855f7; }
+
+/* Back tile */
+.mj-tile--back {
+  cursor: default;
+  background: linear-gradient(135deg, #374151, #1f2937);
+  color: transparent;
+  border-color: #4b5563;
+  width: 20px;
+  height: 28px;
+}
+
+/* Small tiles in discard piles */
+.mj-tile--small {
+  width: 24px;
+  height: 32px;
+  font-size: 0.6rem;
+  cursor: default;
+}
+
+/* ── Opponents ───────────────────────────────────────────────────────── */
+
+.mj-opponent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.mj-opponent--top {
+  padding: 0.5rem 0;
+}
+
+.mj-opponent--side {
+  padding: 0.25rem;
+  min-width: 80px;
+}
+
+.mj-opponent-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mj-tile-back-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.mj-tile-backs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  justify-content: center;
+}
+
+.mj-tile-count {
+  font-size: 0.6rem;
+  color: var(--color-text-muted);
+}
+
+/* ── Middle row ──────────────────────────────────────────────────────── */
+
+.mj-middle-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+/* ── Table / discard area ────────────────────────────────────────────── */
+
+.mj-table {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: rgba(0,0,0,0.2);
+  border-radius: var(--radius-lg);
+  padding: 0.75rem;
+  min-height: 180px;
+}
+
+.mj-discard-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mj-discard-row-sides {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.mj-discard-row-sides > .mj-discard-pile {
+  flex: 1;
+}
+
+.mj-table-center {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.5rem;
+}
+
+.mj-wall-count {
+  font-size: 0.65rem;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono, monospace);
+  line-height: 1.3;
+}
+
+.mj-discard-pile {
+  min-width: 60px;
+}
+
+.mj-discard-label {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  margin-bottom: 2px;
+}
+
+.mj-discard-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.mj-discard-empty {
+  font-size: 0.6rem;
+  color: var(--color-text-muted);
+}
+
+.mj-last-action {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  text-align: center;
+  padding: 2px 4px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 4px;
+}
+
+/* ── Your hand ───────────────────────────────────────────────────────── */
+
+.mj-your-hand-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+}
+
+.mj-your-hand {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+}
+
+/* ── Action buttons ──────────────────────────────────────────────────── */
+
+.mj-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.mj-action-btn {
+  min-width: 90px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.mj-action-btn--riichi {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fff;
+  border: none;
+}
+.mj-action-btn--riichi:disabled {
+  opacity: 0.4;
+}
+
+.mj-action-btn--tsumo {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+  border: none;
+  animation: mj-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes mj-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.5); }
+  50%       { box-shadow: 0 0 0 8px rgba(34,197,94,0);  }
+}
+
+/* ── Status indicators ───────────────────────────────────────────────── */
+
+.mj-turn-indicator {
+  color: var(--color-primary, #6366f1);
+  font-size: 0.65rem;
+}
+
+.mj-riichi-badge {
+  font-size: 0.5rem;
+  background: rgba(245,158,11,0.2);
+  color: #f59e0b;
+  border: 1px solid rgba(245,158,11,0.4);
+  border-radius: 3px;
+  padding: 0 3px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.mj-riichi-declared {
+  font-size: var(--text-xs);
+  color: #f59e0b;
+  background: rgba(245,158,11,0.1);
+  border: 1px solid rgba(245,158,11,0.3);
+  border-radius: 4px;
+  padding: 4px 10px;
+}
+
+.mj-waiting {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+/* ── Move history list (right panel) ────────────────────────────────── */
+.mj-move-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono, monospace);
+}

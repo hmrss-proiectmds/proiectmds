@@ -18,6 +18,10 @@ try:
     from app.games.bots.hf_pokerbot import pick_hf_poker_move
 except ImportError:
     pick_hf_poker_move = None
+try:
+    from app.games.bots.hf_mahjongbot import pick_hf_mahjong_move
+except ImportError:
+    pick_hf_mahjong_move = None
 
 
 def _run_single_game(game_type: str, bot_a: str, bot_b: str, max_turns: int = 500) -> dict:
@@ -44,6 +48,14 @@ def _run_single_game(game_type: str, bot_a: str, bot_b: str, max_turns: int = 50
                     return pick_hf_poker_move(engine, st)
                 except Exception as e:
                     print(f"BOT ERROR (Poker): {e}")
+                    return pick_random_move(engine, st)
+            return pick_random_move(engine, st)
+        elif bot_type == "mahjongbot" and game_type == "mahjong":
+            if pick_hf_mahjong_move:
+                try:
+                    return pick_hf_mahjong_move(engine, st)
+                except Exception as e:
+                    print(f"BOT ERROR (Mahjong): {e}")
                     return pick_random_move(engine, st)
             return pick_random_move(engine, st)
         return pick_random_move(engine, st)

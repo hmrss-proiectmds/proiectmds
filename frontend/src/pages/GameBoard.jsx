@@ -4,6 +4,7 @@ import { useGameState } from '../hooks/useGameState';
 import { api } from '../api/client';
 import ChessBoard from '../components/ChessBoard';
 import PokerBoard from '../components/PokerBoard';
+import MahjongBoard from '../components/MahjongBoard';
 import './GameBoard.css';
 
 const SEAT_COLOR = { 1: 'White', 2: 'Black' };
@@ -75,9 +76,20 @@ export default function GameBoard() {
     hand_phase = '',
     hand_just_ended = false,
     showdown_info = null,
+    // Mahjong-specific fields
+    other_players = {},
+    discards: mj_discards = {},
+    riichi = {},
+    last_discard: mj_last_discard,
+    last_discard_seat: mj_last_discard_seat,
+    wall_remaining = 0,
+    winner_seat,
+    win_type,
+    _last_action,
   } = gameState;
 
-  const isPoker = game_type === 'poker';
+  const isPoker   = game_type === 'poker';
+  const isMahjong = game_type === 'mahjong';
   const yourPlayer = players.find((p) => p.seat === your_seat);
   const opponentPlayer = players.find((p) => p.seat !== your_seat);
   const isYourTurn = turn_seat === your_seat && !game_over;
@@ -112,8 +124,8 @@ export default function GameBoard() {
       <div className="game-layout">
         {/* Left column: board */}
         <div className="game-board-column">
-          {/* Non-poker: opponent bar */}
-          {!isPoker && (
+          {/* Non-poker, non-mahjong: opponent bar */}
+          {!isPoker && !isMahjong && (
             <div className="game-player-bar opponent">
               <div className="player-info">
                 <span className="player-icon">
@@ -153,6 +165,25 @@ export default function GameBoard() {
               handJustEnded={hand_just_ended}
               showdownInfo={showdown_info}
             />
+          ) : isMahjong ? (
+            <MahjongBoard
+              yourHand={your_hand || []}
+              yourSeat={your_seat}
+              otherPlayers={other_players}
+              discards={mj_discards}
+              legalMoves={isYourTurn ? legal_moves : []}
+              currentSeat={turn_seat}
+              lastDiscard={mj_last_discard}
+              lastDiscardSeat={mj_last_discard_seat}
+              wallRemaining={wall_remaining}
+              riichiStatus={riichi}
+              winnerSeat={winner_seat}
+              winType={win_type}
+              lastAction={_last_action}
+              players={players}
+              onMove={sendMove}
+              disabled={!isYourTurn || game_over || isWaiting}
+            />
           ) : (
             <ChessBoard
               board={board}
@@ -166,8 +197,8 @@ export default function GameBoard() {
             />
           )}
 
-          {/* Non-poker: your info bar */}
-          {!isPoker && (
+          {/* Non-poker, non-mahjong: your info bar */}
+          {!isPoker && !isMahjong && (
             <div className="game-player-bar you">
               <div className="player-info">
                 <span className="player-icon">👤</span>
@@ -249,7 +280,7 @@ export default function GameBoard() {
                     </button>
                     <button
                       className="btn btn-sm lobby-btn-hf-sm"
-                      onClick={() => handleAddBot(isPoker ? 'pokerbot' : 'chessbot')}
+                      onClick={() => handleAddBot(isPoker ? 'pokerbot' : isMahjong ? 'mahjongbot' : 'chessbot')}
                       disabled={addingBot}
                       style={{
                         background: 'linear-gradient(135deg, #ff9d00, #ff6b00)',
@@ -324,8 +355,8 @@ export default function GameBoard() {
             </div>
           )}
 
-          {/* Move history (chess) */}
-          {!isPoker && (
+          {/* Move history (chess only) */}
+          {!isPoker && !isMahjong && (
             <div className="card game-moves-card">
               <h3 className="game-moves-title">Moves</h3>
               <div className="game-moves-list">
@@ -351,7 +382,7 @@ export default function GameBoard() {
             <button
               className="btn btn-danger w-full"
               onClick={() => {
-                if (confirm(isPoker ? 'Quit this poker game?' : 'Are you sure you want to resign?')) {
+                if (confirm(isPoker ? 'Quit this poker game?' : isMahjong ? 'Quit this mahjong game?' : 'Are you sure you want to resign?')) {
                   sendResign();
                   // Navigate to lobby after a short delay to allow the
                   // resign message to be sent before the WS closes.
@@ -359,7 +390,7 @@ export default function GameBoard() {
                 }
               }}
             >
-              🏳️ {isPoker ? 'Quit Game' : 'Resign'}
+              🏳️ {isPoker || isMahjong ? 'Quit Game' : 'Resign'}
             </button>
           )}
           {game_over && (

@@ -18,6 +18,7 @@ class UserRole(str, enum.Enum):
     ai_developer = "ai_developer"
     ai_agent_owner = "ai_agent_owner"
     admin = "admin"
+    banned = "banned"
 
 
 class User(Base):

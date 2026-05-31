@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,7 +14,7 @@ from sqlalchemy.orm import selectinload
 
 from app.database import get_db
 from app.dependencies.auth import get_current_user
-from app.models.match import Match, MatchParticipant
+from app.models.match import Match, MatchMove, MatchParticipant
 from app.models.user import User
 
 router = APIRouter(prefix="/api/history", tags=["history"])
@@ -133,3 +133,44 @@ async def get_match_history(
         ))
 
     return MatchHistoryResponse(matches=entries, total=total)
+
+
+@router.get("/{match_id}/moves")
+async def get_match_moves(
+    match_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Return the ordered move list for a completed match.
+
+    Only accessible to participants of the match.
+    Each entry contains: turn_number, seat, move (UCI/action), san, played_at.
+    """
+    # Verify the requesting user participated in this match
+    participant = await db.execute(
+        select(MatchParticipant).where(
+            MatchParticipant.match_id == match_id,
+            MatchParticipant.player_id == current_user.id,
+        )
+    )
+    if participant.scalar_one_or_none() is None:
+        raise HTTPException(status_code=404, detail="Match not found.")
+
+    result = await db.execute(
+        select(MatchMove)
+        .where(MatchMove.match_id == match_id)
+        .order_by(MatchMove.turn_number, MatchMove.played_at)
+    )
+    moves = result.scalars().all()
+
+    return [
+        {
+            "turn_number": m.turn_number,
+            "seat": m.seat,
+            "move": (m.move_payload or {}).get("move", ""),
+            "san": (m.move_payload or {}).get("san") or (m.move_payload or {}).get("move", ""),
+            "played_at": m.played_at.isoformat(),
+        }
+        for m in moves
+    ]
