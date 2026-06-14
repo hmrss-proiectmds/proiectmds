@@ -111,7 +111,6 @@ async def start_simulation(
         # Celery/Redis not available — run synchronously and store result immediately
         from app.tasks.simulations import run_bulk_simulation
         result = run_bulk_simulation(
-            None,  # self
             simulation_id=simulation_id,
             game_type=body.game_type,
             bot_a=body.bot_a,
