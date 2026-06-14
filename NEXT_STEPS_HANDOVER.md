@@ -1,44 +1,107 @@
-# Handover / Next Steps
+# Handover / Next Steps — Sprint 2 (Iunie 2026)
 
-Acest document este destinat viitorilor developeri (sau următoarei echipe) care vor prelua proiectul. El detaliază aspectele curente ale platformei care necesită implementare, rafinare sau optimizare, continuând munca depusă până la acest punct.
+Acest document descrie starea curentă a platformei după **Sprint 2** și pașii rămași pentru echipele viitoare.
 
-## 1. Înlocuirea modelelor de AI (Urgent)
-### Status Curent:
-Roboții interni (Chatbot, PokerBot, ChessBot, MahjongBot) folosesc modele HuggingFace foarte mici (ex. `sshleifer/tiny-gpt2`, `SmolLM2-360M`) rulate local pe CPU. Testele automate (Evals cu Promptfoo) au demonstrat că aceste modele au latențe mari și ratează constant formatele stricte (ex. generează text halucinat în loc de comenzi valide de joc).
+## Ce a fost implementat în acest sprint
 
-### Next Step:
-- [ ] De înlocuit funcțiile `pick_hf_*_move` din `app/games/bots/` cu apeluri API către modele mai mari (ex: OpenAI `gpt-4o-mini`, Anthropic `claude-3-haiku` sau un server local vLLM / Ollama cu un model de minim 8B parametri).
-- [ ] De re-rulat suita `npm run eval` din folderul `evals` după upgrade, pentru a valida că noile modele obțin 100% PASS rate.
-
-## 2. CI/CD: Extindere către Deploy (Medium)
-### Status Curent:
-Avem GitHub Actions configurate pentru Linting (Frontend) și Testare Automată (Backend Pytest). 
-
-### Next Step:
-- [ ] De adăugat pașii de build Docker (`docker build`) în pipeline.
-- [ ] De adăugat step de Deploy automat pe un server cloud (ex. AWS EC2, Heroku, Render) dacă testele și evals-urile trec.
-
-## 3. Sandboxing pentru Scripturile Developerilor (High)
-### Status Curent:
-În prezent, utilizatorii cu rol `ai_developer` pot uploada cod Python pe server. Restricția actuală verifică doar mărimea fișierului (<1MB) și extensia (`.py`).
-
-### Next Step:
-- [ ] De implementat un mecanism de sandboxing real pentru execuția scripturilor terțe.
-- Soluții recomandate: Utilizarea de containere Docker efemere (gVisor/Firecracker) sau restricționarea prin librării Python (PySandbox / rulare cu resurse limitate).
-
-## 4. Optimizarea Bazei de Date (Low)
-### Status Curent:
-Pentru baza de date de teste s-a creat `test_platform`. Toate tabelele sunt up-to-date conform `alembic`.
-
-### Next Step:
-- [ ] De adăugat indecși SQL mai specifici pentru query-urile frecvente de pe tabelele `matches` și `decision_logs`, mai ales având în vedere că un Developer poate trage date în bulk din ele.
-
-## 5. Webhooks Rate Limiting (Medium)
-### Status Curent:
-`ai_agent_owner` poate seta webhook-uri către care platforma trimite HTTP POST requests la fiecare turn din joc.
-
-### Next Step:
-- [ ] Trebuie introdus un rate limiter și timeout strict per owner, astfel încât o aplicație terță care răspunde lent să nu blocheze event loop-ul platformei (deși folosim `asyncio.to_thread` / async httpx, trebuie prevenite abuzurile de rețea).
+| Task | Status | Fișiere afectate |
+|---|---|---|
+| Înlocuire chatbot HuggingFace → Claude API | ✅ DONE | `backend/app/services/chatbot.py` |
+| Înlocuire PokerBot/MahjongBot HF → Claude API | ✅ DONE | `backend/app/games/bots/hf_pokerbot.py`, `hf_mahjongbot.py` |
+| Evals actualizate pentru Claude bots | ✅ DONE | `evals/provider.py`, `evals/promptfooconfig.yaml` |
+| Diagrame tehnice dedicate (8 diagrame Mermaid) | ✅ DONE | `DIAGRAMS.md` |
+| Indexuri SQL pentru performanță | ✅ DONE | `alembic/versions/f9a2e3c1b4d7_add_performance_indexes.py` |
+| Rate limiting webhook (30 req/60s per owner) | ✅ DONE | `backend/app/services/webhook.py` |
+| Docker Build în CI/CD pipeline | ✅ DONE | `.github/workflows/ci.yml`, `backend/Dockerfile`, `frontend/Dockerfile` |
+| Raport AI Usage actualizat | ✅ DONE | `AI_USAGE_REPORT.md` (Secțiunea 8) |
 
 ---
-*Pentru o listă a uneltelor folosite și a infrastructurii deja construite, verificați `AI_USAGE_REPORT.md` și `implementation_plan.md`.*
+
+## 1. Sandboxing Real pentru Scripturile Developerilor (High Priority)
+
+### Status Curent:
+Scripturile Python uploadate de `ai_developer` sunt executate cu restricții minime (doar verificare de dimensiune <1MB și extensie `.py`). Există un `backend/Dockerfile.sandbox` minimal, dar nu este integrat cu flow-ul de execuție.
+
+### Next Step:
+- [ ] Integra `backend/Dockerfile.sandbox` în runner-ul de scripturi (în prezent în `backend/app/services/game.py`)
+- [ ] Fiecare script uploadat să fie executat într-un container Docker efemer cu:
+  - CPU limit: `--cpus=0.5`
+  - Memory limit: `--memory=256m`
+  - Network disabled: `--network=none`
+  - Timeout: 10 secunde
+- [ ] Alternativă mai ușoară: `subprocess.run()` cu `resource.setrlimit` pe Linux
+- [ ] De re-testat cu `tests/test_api_auth.py` după integrare
+
+---
+
+## 2. Deploy Automat pe Cloud (Medium Priority)
+
+### Status Curent:
+Pipeline-ul CI acum include un job `docker-build` care validează că imaginile se construiesc corect. Lipsește pasul de deploy.
+
+### Next Step:
+- [ ] Adăugat job `deploy` în `.github/workflows/ci.yml` care rulează doar pe branch-ul `main` (nu pe PR-uri)
+- [ ] Opțiuni recomandate:
+  - **Render.com**: `render.yaml` config file, suport nativ pentru Docker
+  - **Fly.io**: `fly.toml` + `fly deploy` CLI în CI
+  - **AWS EC2**: `docker pull && docker compose up -d` via SSH action
+- [ ] Setat secretele în GitHub Secrets: `ANTHROPIC_API_KEY`, `DATABASE_URL`, `SECRET_KEY`
+- [ ] De actualizat `CORS_ORIGINS` în `.env` cu domeniul de producție
+
+---
+
+## 3. Re-rulare Evals după Upgrade Claude (Validation)
+
+### Status Curent:
+Evals-urile (`evals/promptfooconfig.yaml`) au fost actualizate pentru a folosi boturile Claude. Nu au fost re-rulate din cauza lipsei `ANTHROPIC_API_KEY` în CI.
+
+### Next Step:
+- [ ] Setat `ANTHROPIC_API_KEY` ca GitHub Secret
+- [ ] Adăugat un job `evals` în CI care rulează `npm run eval` din `evals/`
+- [ ] Target: **100% PASS rate** pe toate cele 7 teste (chatbot + poker + chess + mahjong)
+- [ ] Actualizat asertiile ChessBot (în prezent acceptă orice output non-gol; de înăsprit la UCI format)
+
+---
+
+## 4. Rate Limiting HTTP pentru API (Medium Priority)
+
+### Status Curent:
+Rate limiting-ul există **doar pe webhook-uri** (30 req/60s). REST API-ul nu are rate limiting.
+
+### Next Step:
+- [ ] Adăugat `slowapi` sau `fastapi-limiter` (Redis-backed) pentru endpoint-urile publice
+- [ ] Limite recomandate:
+  - `POST /api/auth/login`: 10 req/min per IP (anti brute-force)
+  - `POST /api/simulations`: 5 req/min per user (bulk simulation este costisitor)
+  - `POST /api/chat`: 30 req/min per user
+
+---
+
+## 5. Frontend Tests (Low Priority)
+
+### Status Curent:
+Nu există teste automate pentru frontend. Toate testele sunt backend-only (pytest).
+
+### Next Step:
+- [ ] Adăugat Vitest + React Testing Library în `frontend/package.json`
+- [ ] Scris teste pentru componentele critice:
+  - `ChessBoard.jsx` — render corect al tablei
+  - `Login.jsx` / `Register.jsx` — validare form
+  - `Leaderboard.jsx` — render date
+- [ ] Adăugat job `frontend-test` în CI pipeline
+
+---
+
+## 6. Monitoring și Alerting (Low Priority)
+
+### Status Curent:
+Nu există monitoring de producție. Erorile sunt loggate doar în console.
+
+### Next Step:
+- [ ] Integrat Sentry (sau similar) pentru error tracking în backend FastAPI
+- [ ] Adăugat `structlog` pentru logging structurat JSON
+- [ ] Configured alerte Slack/email pentru erori critice (ex. webhook timeout rate >20%)
+
+---
+
+*Pentru documentația completă a infrastructurii existente, consultați `AI_USAGE_REPORT.md`, `DIAGRAMS.md`, și `implementation_plan.md`.*

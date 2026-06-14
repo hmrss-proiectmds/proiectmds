@@ -200,5 +200,60 @@ Asistentul AI a fost utilizat pentru automatizarea și ghidarea proceselor de **
 Bug-urile întâlnite pe parcurs (ex: `relation "users" does not exist` din cauza tabelelor șterse de suita de teste, `Cannot find module pytest`, erori de Event Loop Async, etc.) au fost identificate, documentate și fixate folosind inteligența artificială. AI-ul a rulat automat comenzile de debug (ex. `alembic downgrade/upgrade`), a identificat cauza și a livrat codul corect prin Pull Requests.
 
 ### 7.6 Pipeline CI/CD
-Infrastructura de Integrare și Livrare Continuă (CI/CD) a fost generată complet folosind AI. Am utilizat asistentul pentru a scrie workflow-urile din **GitHub Actions** (fișierele `.yml`). Acest pipeline rulează automat `npm run lint` pentru frontend, verificările de build, și suita de teste `pytest` din backend la fiecare push pe branch-ul principal, asigurând calitatea codului înainte de deploy.
+Infrastructura de Integrare și Livrare Continuă (CI/CD) a fost generată complet folosind AI. Am utilizat asistentul pentru a scrie workflow-urile din **GitHub Actions** (fișierele `.yml`). Acest pipeline rulează automat `npm run lint` pentru frontend, verificările de build, și suita de teste `pytest` din backend la fiecare push pe branch-ul principal, asigurând calitatea codului înainte de deploy. Ulterior, pipeline-ul a fost extins cu un **job de Docker Build** (`docker/build-push-action`) care verifică că imaginile Docker pentru backend și frontend se construiesc corect înainte de a permite merge-ul unui Pull Request.
+
+---
+
+## 8. Upgrade Sprint — Înlocuirea Modelelor AI (Iunie 2026)
+
+Conform recomandărilor din `NEXT_STEPS_HANDOVER.md`, în acest sprint au fost implementate upgrade-uri majore ale componentelor AI:
+
+### 8.1 Înlocuirea Chatbot-ului HuggingFace cu Anthropic Claude API
+
+Modelul local `HuggingFaceTB/SmolLM2-360M-Instruct` (360M parametri, rulat pe CPU) a fost înlocuit cu **Anthropic Claude `claude-haiku-4-5-20251001`** prin SDK-ul oficial `anthropic`. Avantaje:
+- Latență redusă de la ~8-15 secunde (CPU inference) la ~0.5-1 secundă (API call)
+- Răspunsuri coerente și contextual relevante pentru platforma de jocuri
+- Sistemul de prompt din `chatbot_prompt.md` este transmis ca `system` message nativ în API
+- Fallback grațios când `ANTHROPIC_API_KEY` nu este configurat
+
+### 8.2 Înlocuirea PokerBot și MahjongBot HuggingFace cu Claude API
+
+Modelele `sshleifer/tiny-gpt2` (117M parametri) folosite de `hf_pokerbot.py` și `hf_mahjongbot.py` au fost înlocuite cu apeluri **Claude Haiku** pentru selecția acțiunilor:
+- **PokerBot**: Claude primește starea board-ului (cărți community, pot) și lista de acțiuni legale, răspunzând cu o singură acțiune (FOLD/CHECK/CALL/RAISE/ALLIN). Fallback: weighted-random strategy
+- **MahjongBot**: Claude primește mâna de 14 piese și sugerează tile-ul optim de discard. Fallback: shanten-minimising heuristic (neschimbat)
+
+### 8.3 Evals Actualizate pentru Modelele Claude
+
+Suita Promptfoo `evals/promptfooconfig.yaml` și provider-ul `evals/provider.py` au fost actualizate:
+- Eliminat path-ul hardcodat `/Users/flavius/...` către venv-ul local
+- Provider-ul importă acum boturile Claude-backed
+- Testele existente (JavaScript/Regex assertions) validează că și modelele Claude returnează output în formatul strict cerut
+
+### 8.4 Rate Limiting pentru Webhook-uri
+
+A fost implementat un **rate limiter cu fereastră glisantă** în `backend/app/services/webhook.py`:
+- 30 apeluri maxime per agent-owner per 60 de secunde
+- Apelurile care depășesc limita returnează `None` imediat (fără blocare event loop)
+- Game engine-ul aplică un random move ca fallback când webhookul e blocat
+- Parametrul `owner_id` (agent UUID) este transmis la fiecare apel pentru tracking individual
+
+### 8.5 Indexuri SQL pentru Performanță
+
+Migrație Alembic (`f9a2e3c1b4d7`) adaugă 11 indexuri pe tabelele cu volum mare:
+- `matches`: `game_type`, `mode`, `started_at`
+- `match_participants`: `match_id`, `player_id`, `agent_id`
+- `decision_logs`: `agent_id`, `match_id`, `logged_at`
+- `agents`: `owner_id`, `status`
+
+### 8.6 Diagrame Tehnice (DIAGRAMS.md)
+
+A fost creat un document dedicat `DIAGRAMS.md` cu 8 diagrame Mermaid:
+1. System Architecture Diagram
+2. Database ER Diagram
+3. WebSocket Sequence Diagram
+4. Role Access Control (UML Class)
+5. Matchmaking Workflow
+6. AI Bot Decision Flow
+7. CI/CD Pipeline Diagram
+8. Bulk Simulation Sequence Diagram
 
