@@ -384,7 +384,8 @@ class GameManager:
             exception_msg: Optional[str] = None
             response_data: Optional[dict] = None
             try:
-                move = await call_agent_webhook(ai_player.webhook_url, payload)
+                owner_id = str(ai_player.agent_id) if ai_player.agent_id else ""
+                move = await call_agent_webhook(ai_player.webhook_url, payload, owner_id=owner_id)
                 if move:
                     response_data = {"move": move}
                 else:
