@@ -5,9 +5,10 @@ No authentication required so it's accessible from any page.
 
 import asyncio
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 
+from app.rate_limiter import limiter
 from app.services.chatbot import generate_reply
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
@@ -29,15 +30,13 @@ class ChatResponse(BaseModel):
 
 
 @router.post("", response_model=ChatResponse)
-async def chat(body: ChatRequest):
+@limiter.limit("30/minute")
+async def chat(request: Request, body: ChatRequest):
     """
     Send a message to the platform chatbot.
     The full conversation history is sent each time (stateless).
     No authentication required.
     """
     messages = [{"role": m.role, "content": m.content} for m in body.messages]
-    # Run in a thread so the synchronous model inference
-    # doesn't block the event loop (which would freeze WebSockets, etc.)
     reply = await asyncio.to_thread(generate_reply, messages)
     return ChatResponse(reply=reply)
-

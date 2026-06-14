@@ -2,12 +2,13 @@
 Authentication router: register, login, and get-current-user endpoints.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.dependencies.auth import get_current_user
 from app.models.user import User
+from app.rate_limiter import limiter
 from app.schemas.auth import (
     LoginRequest,
     RegisterRequest,
@@ -30,14 +31,15 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
 )
-async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("5/minute")
+async def register(request: Request, data: RegisterRequest, db: AsyncSession = Depends(get_db)):
     existing_email = await get_user_by_email(db, data.email)
     if existing_email:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="A user with this email already exists.",
         )
-    
+
     existing_user = await get_user_by_username(db, data.username)
     if existing_user:
         raise HTTPException(
@@ -50,7 +52,8 @@ async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def login(request: Request, data: LoginRequest, db: AsyncSession = Depends(get_db)):
     user = await get_user_by_email(db, data.email)
     if not user or not verify_password(data.password, user.password_hash):
         raise HTTPException(

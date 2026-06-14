@@ -27,6 +27,9 @@ mahjong==2.0.0
 # ── HTTP client (for agent webhooks) ──
 httpx==0.28.1
 
+# ── Rate limiting ──
+slowapi==0.1.9
+
 # ── AI / Anthropic Claude ──
 anthropic>=0.40.0
 

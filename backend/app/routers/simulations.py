@@ -13,12 +13,13 @@ import json
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from app.dependencies.auth import get_current_user, require_role
 from app.models.user import User, UserRole
+from app.rate_limiter import limiter
 
 router = APIRouter(prefix="/api/simulations", tags=["simulations"])
 
@@ -75,7 +76,9 @@ def _get_task_status(task_id: str) -> dict:
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.post("", status_code=status.HTTP_202_ACCEPTED, response_model=SimulationStatusResponse)
+@limiter.limit("5/minute")
 async def start_simulation(
+    request: Request,
     body: StartSimulationRequest,
     user: User = Depends(require_role(UserRole.ai_developer, UserRole.admin)),
 ):
