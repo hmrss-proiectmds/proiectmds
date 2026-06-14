@@ -1,13 +1,29 @@
-# backend/Dockerfile.sandbox
-FROM python:3.11-slim
+# Minimal sandbox image for executing untrusted agent scripts.
+#
+# Security constraints (enforced at runtime by the docker run call in game.py):
+#   --network none          no outbound network access
+#   --memory 256m           capped RAM
+#   --cpus 0.5              capped CPU
+#   --read-only             (optional) immutable filesystem except /tmp
+#
+# The user's script is mounted at /sandbox/agent.py at container start time.
+# The platform pipes the game-state JSON to stdin and reads the move JSON from stdout.
 
-# Create a non-privileged user
-RUN useradd -m sandboxuser
+FROM python:3.12-slim
+
+# Non-root user for defence-in-depth
+RUN useradd -m -u 1000 sandboxuser
+
+WORKDIR /sandbox
+
+# Copy the platform's runner (not the user's script — that's mounted at runtime)
+COPY sandbox_runner.py /sandbox/runner.py
+
+# Nothing else is installed intentionally — user scripts must be stdlib-only.
+# If you need numpy / chess etc., extend this image in a separate variant.
+
 USER sandboxuser
 
-WORKDIR /home/sandboxuser
+ENV AGENT_PATH=/sandbox/agent.py
 
-# The script will be mounted at /home/sandboxuser/agent.py
-# and the payload will be piped to stdin.
-
-CMD ["python", "agent.py"]
+CMD ["python", "/sandbox/runner.py"]

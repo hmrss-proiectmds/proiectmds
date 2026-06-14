@@ -7,7 +7,10 @@ Supports both 2-player (chess) and 3-7-player (poker) games.
 from __future__ import annotations
 
 import asyncio
+import logging
 import uuid
+
+log = logging.getLogger(__name__)
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
@@ -413,34 +416,41 @@ class GameManager:
                 except Exception:
                     pass  # Logging must never crash the game
 
-        # ── Uploaded script agent ──────────────────────────────────────────────
+        # ── Uploaded script agent (Docker sandbox) ────────────────────────────
         elif getattr(ai_player, 'script_path', None):
             import subprocess
-            import json
+            import json as _json
             from app.services.webhook import build_webhook_payload
             payload = build_webhook_payload(session, current_turn)
             from pathlib import Path
             abs_script_path = str(Path(ai_player.script_path).resolve())
             try:
-                # Run in a restricted Docker sandbox
                 proc = subprocess.run(
                     [
                         "docker", "run", "--rm", "-i",
                         "--network", "none",
-                        "--memory", "128m",
+                        "--memory", "256m",
                         "--cpus", "0.5",
-                        "-v", f"{abs_script_path}:/home/sandboxuser/agent.py",
-                        "ai-sandbox"
+                        "-v", f"{abs_script_path}:/sandbox/agent.py:ro",
+                        "gameplatform-sandbox",
                     ],
-                    input=json.dumps(payload).encode('utf-8'),
+                    input=_json.dumps(payload).encode("utf-8"),
                     capture_output=True,
-                    timeout=7.0  # Slightly longer timeout for docker startup
+                    timeout=10.0,
                 )
                 if proc.returncode == 0:
-                    result = json.loads(proc.stdout)
+                    result = _json.loads(proc.stdout)
                     move = result.get("move")
-            except Exception:
-                pass
+                else:
+                    log.warning(
+                        "[Sandbox] agent exit %d: %s",
+                        proc.returncode,
+                        proc.stderr.decode(errors="replace")[:200],
+                    )
+            except subprocess.TimeoutExpired:
+                log.warning("[Sandbox] agent timed out after 10s")
+            except Exception as exc:
+                log.warning("[Sandbox] error running agent: %s", exc)
             if not move:
                 move = pick_random_move(session.engine, session.state)
 
