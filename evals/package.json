@@ -1,0 +1,13 @@
+{
+  "name": "agent-evals",
+  "version": "1.0.0",
+  "description": "Agent Evaluations using Promptfoo",
+  "main": "index.js",
+  "scripts": {
+    "eval": "promptfoo eval",
+    "view": "promptfoo view"
+  },
+  "devDependencies": {
+    "promptfoo": "^0.121.15"
+  }
+}

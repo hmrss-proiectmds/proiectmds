@@ -174,3 +174,31 @@ The following changes were implemented to enforce and expose the role definition
 - Role enforcement is **server-side**. Frontend nav filtering is UX only — all protected endpoints return `403 Forbidden` when called by the wrong role regardless of UI state.
 - Agent script execution is not yet sandboxed beyond file size (1 MB) and extension (`.py` only) restrictions. Execution isolation (e.g. subprocess, container) is a recommended future hardening step.
 - Webhook agents call external URLs controlled by the owner. The platform does not validate or restrict what those URLs do; a malicious webhook could exploit the HTTP call. Rate limiting on the webhook dispatcher is recommended for production.
+
+---
+
+## 7. Utilizarea AI în Procesul de Dezvoltare Software (Raport Complet)
+
+Acest proiect a fost dezvoltat utilizând intensiv asistenți și tool-uri bazate pe Inteligență Artificială, acoperind integral cerințele ciclului de dezvoltare software:
+
+### 7.1 User Stories și Backlog Creation
+Am folosit un asistent AI (Gemini / Antigravity IDE) pentru a transforma cerințele funcționale vagi în **peste 10 User Stories structurate** (în format Agile: "As a [role], I want to [action] so that [benefit]"). Modelele de limbaj ne-au ajutat să definim corect criteriile de acceptanță (Acceptance Criteria) și să populăm un backlog organizat pentru funcționalitățile platformei (ex. integrare Webhooks, mecanismul de ELO, logica de Matchmaking).
+
+### 7.2 Diagrame (UML, Arhitectură)
+Pentru vizualizarea arhitecturii complexe (backend FastAPI, worker Celery, broker Redis, conexiuni WebSocket și integrarea webhook-urilor pentru agenți externi), am folosit tool-uri AI pentru a genera **diagrame de arhitectură, diagrame de secvență (UML) și workflow-uri**. Codul Mermaid.js pentru diagrame a fost generat și rafinat 100% cu ajutorul AI, scurtând timpul de documentare tehnică.
+
+### 7.3 Source Control cu Git
+Asistentul AI a fost utilizat pentru automatizarea și ghidarea proceselor de **source control (Git)**:
+- Generarea scripturilor și a comenzilor de git (`branch creation`, `commit`-uri descriptive, rezolvare de conflicte `merge/rebase`).
+- Scrierea și formatarea **Pull Request-urilor (PR)**, unde AI-ul a sumarizat automat modificările de cod, oferind descrieri detaliate pentru review. Au fost realizate minim 5 commit-uri complexe.
+
+### 7.4 Teste Automate și Evaluări Agenți (Evals)
+- **Teste Unitare/Integrare**: Am folosit asistentul AI pentru a genera teste automate cu `pytest` (ex: rezolvarea problemelor de validare Pydantic, testarea fluxurilor de autentificare pe o bază de date izolată `test_platform`).
+- **Testarea Agenților (Evals)**: Am integrat **Promptfoo**, un tool open-source pentru testarea sistematică a LLM-urilor (agenții). Promptfoo a fost configurat de AI pentru a rula asertări avansate (Javascript & Regex) pe modelele interne (HuggingFace `tiny-gpt2`), testând politețea Chatbot-ului și strictețea mutărilor din Poker/Șah/Mahjong. S-a realizat un Custom Python Provider care preia state-urile jocului și rulează modelul, detectând halucinațiile agenților.
+
+### 7.5 Raportare Bug-uri și Rezolvare
+Bug-urile întâlnite pe parcurs (ex: `relation "users" does not exist` din cauza tabelelor șterse de suita de teste, `Cannot find module pytest`, erori de Event Loop Async, etc.) au fost identificate, documentate și fixate folosind inteligența artificială. AI-ul a rulat automat comenzile de debug (ex. `alembic downgrade/upgrade`), a identificat cauza și a livrat codul corect prin Pull Requests.
+
+### 7.6 Pipeline CI/CD
+Infrastructura de Integrare și Livrare Continuă (CI/CD) a fost generată complet folosind AI. Am utilizat asistentul pentru a scrie workflow-urile din **GitHub Actions** (fișierele `.yml`). Acest pipeline rulează automat `npm run lint` pentru frontend, verificările de build, și suita de teste `pytest` din backend la fiecare push pe branch-ul principal, asigurând calitatea codului înainte de deploy.
+

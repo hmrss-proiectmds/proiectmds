@@ -4,3 +4,4 @@
 **/backend/models/
 **/__pycache__/
 *.pyc
+evals/node_modules/
