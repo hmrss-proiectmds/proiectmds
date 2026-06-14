@@ -113,7 +113,7 @@ def run_bulk_simulation(self, simulation_id: str, game_type: str, bot_a: str, bo
 
     for i in range(num_games):
         # Only update Celery state if we are running as a task
-        if hasattr(self, "update_state"):
+        if hasattr(self, "update_state") and getattr(self.request, "id", None):
             self.update_state(
                 state="PROGRESS",
                 meta={"simulation_id": simulation_id, "completed": i, "total": num_games, "percent": int(i / num_games * 100)},
