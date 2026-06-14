@@ -25,6 +25,8 @@ export function useWebSocket(url, { onMessage, onClose, onOpen, enabled = true }
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
   useEffect(() => { onOpenRef.current = onOpen; }, [onOpen]);
 
+  const connectRef = useRef(null);
+
   const connect = useCallback(() => {
     if (!url || !enabled) return;
 
@@ -55,7 +57,9 @@ export function useWebSocket(url, { onMessage, onClose, onOpen, enabled = true }
       const intentional = [4001, 4003, 4004].includes(event.code) || event.code === 1000;
       if (!intentional && retryRef.current < maxRetries) {
         retryRef.current += 1;
-        setTimeout(connect, retryDelayMs * retryRef.current);
+        setTimeout(() => {
+          connectRef.current?.();
+        }, retryDelayMs * retryRef.current);
       }
     };
 
@@ -63,6 +67,10 @@ export function useWebSocket(url, { onMessage, onClose, onOpen, enabled = true }
       ws.close();
     };
   }, [url, enabled]);
+
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
 
   useEffect(() => {
     connect();

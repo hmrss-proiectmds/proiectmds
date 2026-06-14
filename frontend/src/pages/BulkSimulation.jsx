@@ -51,9 +51,16 @@ export default function BulkSimulation() {
   const [result, setResult]       = useState(null);
   const pollRef = useRef(null);
 
+  const refreshList = async () => {
+    try {
+      const r = await api.get('/api/simulations');
+      setSimulations(r);
+    } catch {}
+  };
+
   // Load past simulations on mount
   useEffect(() => {
-    api.get('/api/simulations').then(r => setSimulations(r)).catch(() => {});
+    refreshList();
   }, []);
 
   // Poll active simulation
@@ -81,13 +88,6 @@ export default function BulkSimulation() {
     }, 1500);
     return () => clearInterval(pollRef.current);
   }, [activeSimId]);
-
-  const refreshList = async () => {
-    try {
-      const r = await api.get('/api/simulations');
-      setSimulations(r);
-    } catch {}
-  };
 
   const handleStart = async (e) => {
     e.preventDefault();

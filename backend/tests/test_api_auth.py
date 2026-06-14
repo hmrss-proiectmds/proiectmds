@@ -49,7 +49,7 @@ class TestRegister:
         import uuid
         uid = uuid.uuid4().hex[:10]
         payload = {
-            "email": f"{uid}@dup.invalid",
+            "email": f"{uid}@dup.com",
             "username": uid,
             "password": "TestPass123!",
             "role": "human_player",
@@ -133,7 +133,7 @@ class TestLogin:
 
     async def test_login_nonexistent_user_returns_401(self, http):
         resp = await http.post("/api/auth/login", json={
-            "email": "ghost@nowhere.invalid",
+            "email": "ghost@nowhere.com",
             "password": "TestPass123!",
         })
         assert resp.status_code == 401
