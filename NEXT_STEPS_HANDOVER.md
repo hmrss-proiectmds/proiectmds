@@ -1,107 +1,116 @@
-# Handover / Next Steps — Sprint 2 (Iunie 2026)
+# Handover / Next Steps — Sprint 3 (Iunie 2026)
 
-Acest document descrie starea curentă a platformei după **Sprint 2** și pașii rămași pentru echipele viitoare.
+Acest document descrie starea curentă a platformei după **Sprint 3** și pașii rămași pentru echipele viitoare.
 
 ## Ce a fost implementat în acest sprint
 
 | Task | Status | Fișiere afectate |
 |---|---|---|
-| Înlocuire chatbot HuggingFace → Claude API | ✅ DONE | `backend/app/services/chatbot.py` |
-| Înlocuire PokerBot/MahjongBot HF → Claude API | ✅ DONE | `backend/app/games/bots/hf_pokerbot.py`, `hf_mahjongbot.py` |
-| Evals actualizate pentru Claude bots | ✅ DONE | `evals/provider.py`, `evals/promptfooconfig.yaml` |
-| Diagrame tehnice dedicate (8 diagrame Mermaid) | ✅ DONE | `DIAGRAMS.md` |
-| Indexuri SQL pentru performanță | ✅ DONE | `alembic/versions/f9a2e3c1b4d7_add_performance_indexes.py` |
-| Rate limiting webhook (30 req/60s per owner) | ✅ DONE | `backend/app/services/webhook.py` |
-| Docker Build în CI/CD pipeline | ✅ DONE | `.github/workflows/ci.yml`, `backend/Dockerfile`, `frontend/Dockerfile` |
-| Raport AI Usage actualizat | ✅ DONE | `AI_USAGE_REPORT.md` (Secțiunea 8) |
+| Sandbox Docker real pentru scripturi uploadate | ✅ DONE | `backend/sandbox_runner.py`, `backend/Dockerfile.sandbox`, `backend/app/services/game.py` |
+| Rate limiting REST API (slowapi) | ✅ DONE | `backend/app/rate_limiter.py`, `app/main.py`, `routers/auth.py`, `routers/chat.py`, `routers/simulations.py` |
+| Teste frontend (Vitest + RTL, 13 teste) | ✅ DONE | `frontend/src/test/`, `frontend/package.json`, `frontend/vite.config.js` |
+| Evals CI job (Promptfoo) | ✅ DONE | `.github/workflows/ci.yml` |
+| Evals: asertie Chess strictă UCI format | ✅ DONE | `evals/promptfooconfig.yaml` |
+| Deploy automat Render.com | ✅ DONE | `render.yaml`, `.github/workflows/ci.yml` (deploy job) |
 
 ---
 
-## 1. Sandboxing Real pentru Scripturile Developerilor (High Priority)
+## 1. Activarea Deploy-ului Automat (Urgent)
 
 ### Status Curent:
-Scripturile Python uploadate de `ai_developer` sunt executate cu restricții minime (doar verificare de dimensiune <1MB și extensie `.py`). Există un `backend/Dockerfile.sandbox` minimal, dar nu este integrat cu flow-ul de execuție.
+`render.yaml` și job-ul `deploy` din CI sunt implementate, dar **nu sunt activate** fără configurare manuală.
 
-### Next Step:
-- [ ] Integra `backend/Dockerfile.sandbox` în runner-ul de scripturi (în prezent în `backend/app/services/game.py`)
-- [ ] Fiecare script uploadat să fie executat într-un container Docker efemer cu:
-  - CPU limit: `--cpus=0.5`
-  - Memory limit: `--memory=256m`
-  - Network disabled: `--network=none`
-  - Timeout: 10 secunde
-- [ ] Alternativă mai ușoară: `subprocess.run()` cu `resource.setrlimit` pe Linux
-- [ ] De re-testat cu `tests/test_api_auth.py` după integrare
+### Next Steps:
+- [ ] Conecta repo-ul la Render.com: Dashboard → New → Blueprint → selectează repo-ul
+- [ ] Seta secretele în Render dashboard: `ANTHROPIC_API_KEY`, `SECRET_KEY`
+- [ ] În GitHub → Settings → Variables → Actions, adaugă:
+  - `RENDER_DEPLOY_HOOK_URL` = URL-ul hook-ului de deploy din Render dashboard
+  - `RUN_EVALS` = `true` (activează job-ul de evals în CI)
+- [ ] Adaugă `ANTHROPIC_API_KEY` ca GitHub Secret (pentru job-ul de evals)
 
 ---
 
-## 2. Deploy Automat pe Cloud (Medium Priority)
+## 2. Build și Push Docker Images (Medium Priority)
 
 ### Status Curent:
-Pipeline-ul CI acum include un job `docker-build` care validează că imaginile se construiesc corect. Lipsește pasul de deploy.
+CI-ul construiește imaginile Docker (`gameplatform-backend`, `gameplatform-frontend`, `gameplatform-sandbox`) local în runner, dar **nu le publică** nicăieri.
 
-### Next Step:
-- [ ] Adăugat job `deploy` în `.github/workflows/ci.yml` care rulează doar pe branch-ul `main` (nu pe PR-uri)
-- [ ] Opțiuni recomandate:
-  - **Render.com**: `render.yaml` config file, suport nativ pentru Docker
-  - **Fly.io**: `fly.toml` + `fly deploy` CLI în CI
-  - **AWS EC2**: `docker pull && docker compose up -d` via SSH action
-- [ ] Setat secretele în GitHub Secrets: `ANTHROPIC_API_KEY`, `DATABASE_URL`, `SECRET_KEY`
-- [ ] De actualizat `CORS_ORIGINS` în `.env` cu domeniul de producție
+### Next Steps:
+- [ ] Adaugă un job `docker-push` în CI care publică imaginile pe **GitHub Container Registry** (ghcr.io) sau **Docker Hub** după ce `ci-passed` trece
+- [ ] Configurează secretele: `GHCR_TOKEN` sau `DOCKERHUB_TOKEN`
+- [ ] Render.com poate folosi imaginile din registry în loc de build din sursă (mai rapid)
+- [ ] Exemplu de pas în CI:
+  ```yaml
+  - name: Push to GHCR
+    uses: docker/build-push-action@v5
+    with:
+      push: true
+      tags: ghcr.io/hmrss-proiectmds/gameplatform-backend:latest
+  ```
 
 ---
 
-## 3. Re-rulare Evals după Upgrade Claude (Validation)
+## 3. Construirea Imaginii Sandbox înainte de Utilizare (High Priority)
 
 ### Status Curent:
-Evals-urile (`evals/promptfooconfig.yaml`) au fost actualizate pentru a folosi boturile Claude. Nu au fost re-rulate din cauza lipsei `ANTHROPIC_API_KEY` în CI.
+`game.py` apelează `docker run gameplatform-sandbox` dar această imagine trebuie construită **manual** înainte de a porni serverul: `docker build -t gameplatform-sandbox -f backend/Dockerfile.sandbox backend/`.
 
-### Next Step:
-- [ ] Setat `ANTHROPIC_API_KEY` ca GitHub Secret
-- [ ] Adăugat un job `evals` în CI care rulează `npm run eval` din `evals/`
-- [ ] Target: **100% PASS rate** pe toate cele 7 teste (chatbot + poker + chess + mahjong)
-- [ ] Actualizat asertiile ChessBot (în prezent acceptă orice output non-gol; de înăsprit la UCI format)
-
----
-
-## 4. Rate Limiting HTTP pentru API (Medium Priority)
-
-### Status Curent:
-Rate limiting-ul există **doar pe webhook-uri** (30 req/60s). REST API-ul nu are rate limiting.
-
-### Next Step:
-- [ ] Adăugat `slowapi` sau `fastapi-limiter` (Redis-backed) pentru endpoint-urile publice
-- [ ] Limite recomandate:
-  - `POST /api/auth/login`: 10 req/min per IP (anti brute-force)
-  - `POST /api/simulations`: 5 req/min per user (bulk simulation este costisitor)
-  - `POST /api/chat`: 30 req/min per user
+### Next Steps:
+- [ ] Adaugă o comandă de build sandbox în `start.sh` / `start.ps1`:
+  ```bash
+  docker build -t gameplatform-sandbox -f backend/Dockerfile.sandbox backend/
+  ```
+- [ ] Sau adaugă un service `sandbox-builder` în `docker-compose.yml` cu `build:` config
 
 ---
 
-## 5. Frontend Tests (Low Priority)
-
-### Status Curent:
-Nu există teste automate pentru frontend. Toate testele sunt backend-only (pytest).
-
-### Next Step:
-- [ ] Adăugat Vitest + React Testing Library în `frontend/package.json`
-- [ ] Scris teste pentru componentele critice:
-  - `ChessBoard.jsx` — render corect al tablei
-  - `Login.jsx` / `Register.jsx` — validare form
-  - `Leaderboard.jsx` — render date
-- [ ] Adăugat job `frontend-test` în CI pipeline
-
----
-
-## 6. Monitoring și Alerting (Low Priority)
+## 4. Monitorizare și Alerting de Producție (Low Priority)
 
 ### Status Curent:
 Nu există monitoring de producție. Erorile sunt loggate doar în console.
 
-### Next Step:
-- [ ] Integrat Sentry (sau similar) pentru error tracking în backend FastAPI
-- [ ] Adăugat `structlog` pentru logging structurat JSON
-- [ ] Configured alerte Slack/email pentru erori critice (ex. webhook timeout rate >20%)
+### Next Steps:
+- [ ] Integrat **Sentry** pentru error tracking:
+  ```python
+  pip install sentry-sdk[fastapi]
+  sentry_sdk.init(dsn=settings.SENTRY_DSN)
+  ```
+- [ ] Adăugat `structlog` pentru logging structurat JSON în producție
+- [ ] Configurat alerte pentru: rata de erori >5%, webhook timeout rate >20%
 
 ---
 
-*Pentru documentația completă a infrastructurii existente, consultați `AI_USAGE_REPORT.md`, `DIAGRAMS.md`, și `implementation_plan.md`.*
+## 5. Extindere Teste Frontend (Low Priority)
+
+### Status Curent:
+Avem 13 teste în 3 suite-uri (Login, Leaderboard, Navbar). Componentele de joc nu au teste.
+
+### Next Steps:
+- [ ] Adaugă teste pentru `ChessBoard.jsx`:
+  - Render-ul pieselor pe board
+  - Click pe o piesă selectează piesele valide
+  - Highlight pe mutarea anterioară
+- [ ] Adaugă teste pentru `PokerBoard.jsx`:
+  - Render cărților în mână
+  - Butoanele de acțiune (FOLD, CALL, RAISE)
+- [ ] Target: >50% acoperire pentru componentele din `src/components/`
+
+---
+
+## 6. Rate Limiting Redis-backed (Medium Priority)
+
+### Status Curent:
+Rate limiter-ul actual (slowapi) folosește **stocarea în memorie** — nu funcționează corect cu multiple replici/procese.
+
+### Next Steps:
+- [ ] Activează backend-ul Redis pentru slowapi:
+  ```python
+  from slowapi import Limiter
+  from slowapi.util import get_remote_address
+  limiter = Limiter(key_func=_get_client_ip, storage_uri=settings.REDIS_URL)
+  ```
+- [ ] Testează cu `pytest` că limita funcționează corect după configurare
+
+---
+
+*Pentru documentația completă, consultați `AI_USAGE_REPORT.md`, `DIAGRAMS.md`, și `implementation_plan.md`.*
