@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     CORS_ORIGINS: str = "http://localhost:5173"
 
+    # ── Anthropic API ──
+    ANTHROPIC_API_KEY: str = ""
+
     # ── Email (optional — leave blank to disable email sending) ──
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587

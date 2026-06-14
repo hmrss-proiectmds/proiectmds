@@ -14,11 +14,9 @@ providers:
             content: "{{message}}"
       responseParser: "json.reply"
 
-  # 2. Game Bots Provider (Custom Python Script)
+  # 2. Game Bots Provider (Custom Python Script — Claude-based bots)
   - id: "python:provider.py"
     label: "game_bots"
-    config:
-      pythonExecutable: "/Users/flavius/proiectmds/backend/.venv/bin/python"
 
 tests:
   # ==========================================

@@ -27,7 +27,10 @@ mahjong==2.0.0
 # ── HTTP client (for agent webhooks) ──
 httpx==0.28.1
 
-# ── AI / HuggingFace ──
+# ── AI / Anthropic Claude ──
+anthropic>=0.40.0
+
+# ── AI / HuggingFace (chess bot only — poker/mahjong/chatbot now use Claude) ──
 transformers>=4.48.0
 torch>=2.6.0
 huggingface-hub>=0.30.0
