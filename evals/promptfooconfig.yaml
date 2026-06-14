@@ -78,7 +78,7 @@ tests:
   # ==========================================
   # CHESS BOT TESTS
   # ==========================================
-  - description: "ChessBot - Valid Move Generation"
+  - description: "ChessBot - Valid UCI Move Generation"
     options:
       provider: "game_bots"
     vars:
@@ -93,9 +93,10 @@ tests:
     assert:
       - type: javascript
         value: >
-          // Just check if it's one of the common chess notations or the exact legal moves
-          const valid = output.length > 0;
-          return { pass: valid, score: valid ? 1 : 0, reason: valid ? "Valid chess move" : "Empty output" };
+          // Must be one of the legal moves provided (UCI format: 4-char source+dest)
+          const legalMoves = ["e2e4", "d2d4", "g1f3", "b1c3"];
+          const valid = legalMoves.includes(output.trim().toLowerCase());
+          return { pass: valid, score: valid ? 1 : 0, reason: valid ? "Valid UCI move from legal list" : "Move not in legal list: " + output };
 
   # ==========================================
   # MAHJONG BOT TESTS
