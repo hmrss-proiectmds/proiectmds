@@ -3,9 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import ChessBoard from '../components/ChessBoard';
 import PokerBoard from '../components/PokerBoard';
+import MahjongBoard from '../components/MahjongBoard';
 import './Spectate.css';
 
-const GAME_ICONS = { chess: '♟️', poker: '🃏' };
+const GAME_ICONS = { chess: '♟️', poker: '🃏', mahjong: '🀄' };
 const WS_BASE = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`;
 
 /**
@@ -155,6 +156,7 @@ function SpectateGame({ gameId }) {
   } = gameState;
 
   const isPoker = game_type === 'poker';
+  const isMahjong = game_type === 'mahjong';
 
   const resultText = game_over && result
     ? result.result === 'draw'
@@ -203,6 +205,24 @@ function SpectateGame({ gameId }) {
             handPhase={hand_phase}
             handJustEnded={hand_just_ended}
             showdownInfo={showdown_info}
+          />
+        ) : isMahjong ? (
+          <MahjongBoard
+            board={board}
+            yourHand={your_hand || []}
+            legalMoves={[]}
+            turnSeat={turn_seat}
+            yourSeat={0}
+            players={players}
+            onMove={() => {}}
+            disabled={true}
+            actionLog={action_log}
+            gameInfo={{
+              wind: gameState.round_wind || 'East',
+              round: gameState.round_number || 1,
+              honba: gameState.honba || 0,
+              tiles_left: gameState.wall_count || 70
+            }}
           />
         ) : (
           <ChessBoard

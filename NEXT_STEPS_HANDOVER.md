@@ -26,11 +26,7 @@ Dacă o altă echipă dorește să continue acest proiect, aici sunt cele 3 mari
 **Situația curentă:** Platforma este expusă atacurilor de tip DDoS sau spam pe rutele de Webhooks (unde un adversar ar putea invada event loop-ul trimițând requests infinite).
 **Task:** Integrarea unui Redis-based rate limiter (ex. `fastapi-limiter`) pentru a limita utilizatorii (`ai_agent_owner`) la maxim 30-50 cereri pe minut pe rutele de Webhooks.
 
-### 3. Înlocuirea modelelor de AI Locale (Medium Priority)
-**Situația curentă:** Boții rulează cu `sshleifer/tiny-gpt2`.
-**Task:** De integrat un model mai mare sau un API extern (precum Anthropic sau OpenAI) pentru calitatea deciziilor de Șah și Poker.
-
-### 4. Extindere Teste Frontend (Medium Priority)
+### 3. Extindere Teste Frontend (Medium Priority)
 **Situația curentă:** Testele backend acoperă API-urile și logica de business (`pytest`). Frontend-ul are doar linting și componentele de bază.
 **Task:** De integrat un framework precum `Vitest` sau `Jest` + `React Testing Library` pentru a testa rendering-ul componentelor complexe de joc (ex. `ChessBoard.jsx`, `PokerBoard.jsx`).
 
