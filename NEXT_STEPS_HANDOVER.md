@@ -18,17 +18,17 @@ Acest document reflectă starea de bază a platformei (fără experimente care s
 
 Dacă o altă echipă dorește să continue acest proiect, aici sunt cele 3 mari zone neexplorate încă:
 
-### 1. Extindere Teste Frontend
-**Situația curentă:** Testele backend acoperă API-urile și logica de business (`pytest`). Frontend-ul are doar linting și componentele de bază.
-**Task:** De integrat un framework precum `Vitest` sau `Jest` + `React Testing Library` pentru a testa rendering-ul componentelor complexe de joc (ex. `ChessBoard.jsx`, `PokerBoard.jsx`).
-
-### 2. Sandbox Avansat pentru Scripturile de AI
+### 1. Sandbox Avansat pentru Scripturile de AI (High Priority)
 **Situația curentă:** Dezvoltatorii pot face upload la fișiere Python. Ele sunt rulate în același mediu cu serverul.
 **Task:** Fișierele executabile ar trebui izolate sever. Soluții posibile: rularea unui container Docker efemer pentru fiecare script uploadat, sau restricționarea namespace-ului cu librării gen `PySandbox`. 
 
-### 3. Rate Limiting Avansat
+### 2. Rate Limiting Avansat pentru Webhooks (High Priority)
 **Situația curentă:** Platforma este expusă atacurilor de tip DDoS sau spam pe rutele de Webhooks (unde un adversar ar putea invada event loop-ul trimițând requests infinite).
-**Task:** Integrarea librăriei `slowapi` sau a unui Redis-based rate limiter (ex. `fastapi-limiter`) pentru a limita utilizatorii (`ai_agent_owner`) la maxim 30-50 cereri pe minut pe rutele de Webhooks.
+**Task:** Integrarea unui Redis-based rate limiter (ex. `fastapi-limiter`) pentru a limita utilizatorii (`ai_agent_owner`) la maxim 30-50 cereri pe minut pe rutele de Webhooks.
+
+### 3. Extindere Teste Frontend (Medium Priority)
+**Situația curentă:** Testele backend acoperă API-urile și logica de business (`pytest`). Frontend-ul are doar linting și componentele de bază.
+**Task:** De integrat un framework precum `Vitest` sau `Jest` + `React Testing Library` pentru a testa rendering-ul componentelor complexe de joc (ex. `ChessBoard.jsx`, `PokerBoard.jsx`).
 
 ---
 *Proiectul este acum stabil, are 100% test passing rate pe main branch, iar documentația corespunde perfect baremului inițial de dezvoltare.*
