@@ -312,10 +312,7 @@ class TestChessHFBot:
         engine = ChessEngine()
         state = engine.create_initial_state()
 
-        class _BadModel:
-            def get_move_from_fen_no_thinking(self, fen, T, device, force_legal):
-                return "e1e8"  # always illegal
-
-        with patch("app.games.bots.hf_chessbot._load_model", return_value=(_BadModel(), "cpu")):
+        mock_pipe = _mock_pipeline("e1e8")
+        with patch("app.games.bots.hf_chessbot._get_pipeline", return_value=mock_pipe):
             move = pick_hf_move(engine, state)
         assert engine.validate_move(state, move), f"Fallback returned illegal move: {move}"
