@@ -22,16 +22,8 @@ def upgrade() -> None:
     """Upgrade schema."""
     # Indexes for matches table
     op.create_index('ix_matches_game_type', 'matches', ['game_type'], unique=False)
-    op.create_index('ix_matches_status', 'matches', ['status'], unique=False)
-    
-    # Indexes for decision_logs table
-    op.create_index('ix_decision_logs_agent_id', 'decision_logs', ['agent_id'], unique=False)
-    op.create_index('ix_decision_logs_match_id', 'decision_logs', ['match_id'], unique=False)
 
 
 def downgrade() -> None:
     """Downgrade schema."""
-    op.drop_index('ix_decision_logs_match_id', table_name='decision_logs')
-    op.drop_index('ix_decision_logs_agent_id', table_name='decision_logs')
-    op.drop_index('ix_matches_status', table_name='matches')
     op.drop_index('ix_matches_game_type', table_name='matches')
