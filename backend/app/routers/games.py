@@ -444,64 +444,62 @@ async def _run_ai_loop(game_id: uuid.UUID):
             if not session or session.status != "active":
                 break
 
+            # Slow down AI moves so humans can spectate and frontend doesn't crash
+            await asyncio.sleep(1.0)
 
-        # Slow down AI moves so humans can spectate and frontend doesn't crash
-        await asyncio.sleep(1.0)
+            # ── Handle hand transition: pause so players see the results ──
+            if hasattr(session.engine, "needs_new_hand") and session.engine.needs_new_hand(session.state):
+                # Broadcast the "hand ended" state (shows showdown/results)
+                for s in session.players:
+                    msg = _build_state_response(session, s)
+                    await ws_manager.send_to_player(game_id, s, msg)
+                await _broadcast_spectators(game_id, session)
 
-        # ── Handle hand transition: pause so players see the results ──
-        if hasattr(session.engine, "needs_new_hand") and session.engine.needs_new_hand(session.state):
-            # Broadcast the "hand ended" state (shows showdown/results)
-            for s in session.players:
-                msg = _build_state_response(session, s)
-                await ws_manager.send_to_player(game_id, s, msg)
-            await _broadcast_spectators(game_id, session)
+                # Pause so players can see the hand results
+                await asyncio.sleep(5.0)
 
-            # Pause so players can see the hand results
-            await asyncio.sleep(5.0)
+                # Start the next hand
+                session.state = session.engine.start_next_hand(session.state)
 
-            # Start the next hand
-            session.state = session.engine.start_next_hand(session.state)
+                # Check if the game just ended (e.g. all but one player busted)
+                async with async_session() as db:
+                    game_ended = await game_manager.check_and_finalize(db, game_id)
+                    if game_ended:
+                        await db.commit()
+                        # Broadcast final game-over state
+                        for s in session.players:
+                            msg = _build_state_response(session, s)
+                            await ws_manager.send_to_player(game_id, s, msg)
+                        await _broadcast_spectators(game_id, session)
+                        break
 
-            # Check if the game just ended (e.g. all but one player busted)
+                # Broadcast the fresh new-hand state
+                for s in session.players:
+                    msg = _build_state_response(session, s)
+                    await ws_manager.send_to_player(game_id, s, msg)
+                await _broadcast_spectators(game_id, session)
+
+                # Small pause before AI acts on the new hand
+                await asyncio.sleep(0.5)
+                continue
+
             async with async_session() as db:
-                game_ended = await game_manager.check_and_finalize(db, game_id)
-                if game_ended:
-                    await db.commit()
-                    # Broadcast final game-over state
-                    for s in session.players:
-                        msg = _build_state_response(session, s)
-                        await ws_manager.send_to_player(game_id, s, msg)
-                    await _broadcast_spectators(game_id, session)
-                    break
+                ai_result = await game_manager.make_ai_move(db, game_id)
+                if not ai_result:
+                    break  # not AI's turn
+                await db.commit()
+                session, _ = ai_result
 
-            # Broadcast the fresh new-hand state
-            for s in session.players:
-                msg = _build_state_response(session, s)
-                await ws_manager.send_to_player(game_id, s, msg)
-            await _broadcast_spectators(game_id, session)
+                # Broadcast to all players and spectators
+                for s in session.players:
+                    msg = _build_state_response(session, s)
+                    await ws_manager.send_to_player(game_id, s, msg)
+                await _broadcast_spectators(game_id, session)
 
-            # Small pause before AI acts on the new hand
-            await asyncio.sleep(0.5)
-            continue
-
-        async with async_session() as db:
-            ai_result = await game_manager.make_ai_move(db, game_id)
-            if not ai_result:
-                break  # not AI's turn
-            await db.commit()
-            session, _ = ai_result
-
-            # Broadcast to all players and spectators
-            for s in session.players:
-                msg = _build_state_response(session, s)
-                await ws_manager.send_to_player(game_id, s, msg)
-            await _broadcast_spectators(game_id, session)
-
-        if session.status != "active":
-            break
+            if session.status != "active":
+                break
 
     except Exception as e:
         logging.error(f"Error in _run_ai_loop: {e}")
         logging.error(traceback.format_exc())
-
 
