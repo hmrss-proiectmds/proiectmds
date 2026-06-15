@@ -7,7 +7,7 @@ By prioritizing machine-readable state dissemination, asynchronous play hooks, a
 
 ---
 
-## 👥 Features & User Roles
+## 👥 Features & User Roles!
 
 The platform infrastructure revolves around four primary user archetypes, each with customized workflows and permissions:
 
