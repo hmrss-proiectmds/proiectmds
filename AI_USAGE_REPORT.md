@@ -4,6 +4,27 @@ Acest document validează îndeplinirea completă a cerințelor pentru evaluarea
 
 ---
 
+## 0. Agenții AI din Platformă (Ce face fiecare agent)
+Platforma integrează multiple tipuri de agenți AI (boți) pentru a permite utilizatorilor să joace meciuri, să testeze strategii sau să învețe regulile jocurilor. Aceștia sunt:
+
+1. **RandomBot (`random`)**:
+   - **Ce face**: Acesta este agentul de bază al platformei. Indiferent de joc (Șah, Poker, Mahjong), el calculează lista tuturor mutărilor legale în starea curentă a jocului și alege una aleatoriu (uniform distribuit). 
+   - **Rol**: Servește ca baseline (nivel 0 de dificultate) pentru testarea integrării engine-urilor de joc și validarea stabilității tehnice a platformei.
+2. **ChessBot (`chessbot`)**:
+   - **Ce face**: Un agent care procesează starea tablei de șah în format FEN (Forsyth-Edwards Notation). În varianta curentă (bazată pe modelul HuggingFace `sshleifer/tiny-gpt2`), primește ca input istoricul mutărilor și starea tablei, încearcând să prezică următoarea mutare în format UCI (Universal Chess Interface, ex. `e2e4`). 
+   - **Fallback**: Dacă predicția modelului lingvistic este invalidă, trece automat la o strategie fallback de selecție aleatorie.
+3. **PokerBot (`pokerbot`)**:
+   - **Ce face**: Agent specializat în Texas Hold'em. Evaluează cărțile proprii (`hole cards`), cărțile de pe masă (`community cards`), valoarea pot-ului curent și ce acțiuni s-au luat în runda respectivă. Output-ul este o decizie dintre `FOLD`, `CHECK`, `CALL`, `RAISE <amount>` sau `ALLIN`.
+   - **Fallback**: În absența unei predicții coerente, se bazează pe o euristică simplă: șanse mai mari de `CALL/CHECK` (50%), șanse medii de `FOLD` (30%) și șanse mici de `RAISE` (20%).
+4. **MahjongBot (`mahjongbot`)**:
+   - **Ce face**: Agent pentru Riichi Mahjong. Primește mâna de 14 piese. Modelul LLM este interogat pentru a prezice o acțiune (ex. discard-ul unei piese specifice, declararea de `Tsumo`, `Ron`, `Pon`, `Chi`).
+   - **Fallback**: Agentul conține o euristică extrem de sofisticată numită **Shanten Minimizer** (calcularea numărului minim de piese necesare pentru a câștiga mâna, cunoscut ca starea `Tenpai`). Când LLM-ul halucinează, botul calculează matematic piesa optimă pe care s-o arunce astfel încât valoarea `shanten` a mâinii să fie minimizată.
+5. **Platform Chatbot (`Chatbot`)**:
+   - **Ce face**: Un asistent AI conversațional (LLM integrat în frontend-ul aplicației), separat de mecanica jocurilor. 
+   - **Rol**: Răspunde utilizatorilor cu explicații despre regulile jocurilor de Mahjong, Poker și Șah, ajută utilizatorii să înțeleagă scorurile (ELO) și le explică cum funcționează upload-ul de scripturi pentru dezvoltatori.
+
+---
+
 ## 1. User Stories & Backlog Creation (2 pct) ✅
 *Vezi fișierul separat `USER_STORIES.md` pentru detalii complete.*
 - **Generare cu AI:** Am folosit asistentul AI (Google DeepMind Antigravity) pentru a converti cerințele generale de business în **12 User Stories** clare, respectând formatul Agile ("As a [role], I want to [action] so that [benefit]").

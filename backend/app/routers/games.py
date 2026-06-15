@@ -435,11 +435,14 @@ async def _run_ai_loop(game_id: uuid.UUID):
     """
     from app.database import async_session
 
-    max_iterations = 100  # safety valve
-    for _ in range(max_iterations):
+    # Run indefinitely until game ends or human's turn
+    while True:
         session = game_manager.get_session(game_id)
         if not session or session.status != "active":
             break
+
+        # Slow down AI moves so humans can spectate and frontend doesn't crash
+        await asyncio.sleep(1.0)
 
         # ── Handle hand transition: pause so players see the results ──
         if hasattr(session.engine, "needs_new_hand") and session.engine.needs_new_hand(session.state):
