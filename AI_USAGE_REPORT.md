@@ -143,7 +143,7 @@ graph TD
     end
 
     Platform -.-> |Game State POST| ExternalHook(External Webhook)
-    ExternalHook -.-> |{"move": "..."}| Platform
+    ExternalHook -.-> |JSON Move Payload| Platform
     Owner -.-> |Maintains| ExternalHook
 ```
 

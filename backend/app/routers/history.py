@@ -49,12 +49,23 @@ async def get_match_history(
     """Get paginated match history for the current user."""
     user_id = current_user.id
 
+    from app.models.agent import Agent
+    from sqlalchemy import or_
+
+    # Fetch user's agent IDs
+    agent_rows = await db.execute(select(Agent.id).where(Agent.owner_id == user_id))
+    my_agent_ids = {row for row in agent_rows.scalars().all()}
+
+    condition = MatchParticipant.player_id == user_id
+    if my_agent_ids:
+        condition = or_(condition, MatchParticipant.agent_id.in_(list(my_agent_ids)))
+
     # Count total matches
     count_q = (
         select(func.count())
         .select_from(MatchParticipant)
         .join(Match, MatchParticipant.match_id == Match.id)
-        .where(MatchParticipant.player_id == user_id)
+        .where(condition)
         .where(Match.ended_at.isnot(None))
     )
     total_result = await db.execute(count_q)
@@ -65,7 +76,7 @@ async def get_match_history(
     matches_q = (
         select(Match)
         .join(MatchParticipant, Match.id == MatchParticipant.match_id)
-        .where(MatchParticipant.player_id == user_id)
+        .where(condition)
         .where(Match.ended_at.isnot(None))
         .options(selectinload(Match.participants))
         .order_by(Match.ended_at.desc())
@@ -77,9 +88,9 @@ async def get_match_history(
 
     entries = []
     for match in matches:
-        # Find user's participation
+        # Find user's participation (directly or via agent)
         my_part = next(
-            (p for p in match.participants if p.player_id == user_id), None
+            (p for p in match.participants if p.player_id == user_id or (p.agent_id and p.agent_id in my_agent_ids)), None
         )
         if not my_part:
             continue
@@ -88,17 +99,28 @@ async def get_match_history(
         elo_after = my_part.elo_after
         elo_change = (elo_after - elo_before) if elo_after is not None else None
 
-        # Determine outcome using ELO change (reliable for both chess & poker)
+        # Determine outcome using explicit terminal info or ELO change
         result_str = match.result.value if match.result else None
         if result_str == "draw":
             outcome = "draw"
+        elif match.final_state and isinstance(match.final_state, dict) and "terminal" in match.final_state:
+            winner_seat = match.final_state["terminal"].get("winner_seat")
+            if winner_seat == my_part.seat:
+                outcome = "win"
+            else:
+                outcome = "loss"
+        elif match.game_type == "chess" and result_str and result_str.startswith("player"):
+            if result_str == f"player{my_part.seat}_win":
+                outcome = "win"
+            else:
+                outcome = "loss"
         elif elo_after is not None and elo_before is not None:
             if elo_after > elo_before:
                 outcome = "win"
             elif elo_after < elo_before:
                 outcome = "loss"
             else:
-                outcome = "draw"
+                outcome = "loss"  # 0 ELO diff and no terminal info available
         else:
             outcome = "loss"
 

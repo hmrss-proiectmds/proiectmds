@@ -434,12 +434,16 @@ async def _run_ai_loop(game_id: uuid.UUID):
     Handles multi-bot poker tables and hand transitions with pauses.
     """
     from app.database import async_session
+    import logging
+    import traceback
 
-    # Run indefinitely until game ends or human's turn
-    while True:
-        session = game_manager.get_session(game_id)
-        if not session or session.status != "active":
-            break
+    try:
+        # Run indefinitely until game ends or human's turn
+        while True:
+            session = game_manager.get_session(game_id)
+            if not session or session.status != "active":
+                break
+
 
         # Slow down AI moves so humans can spectate and frontend doesn't crash
         await asyncio.sleep(1.0)
@@ -495,4 +499,9 @@ async def _run_ai_loop(game_id: uuid.UUID):
 
         if session.status != "active":
             break
+
+    except Exception as e:
+        logging.error(f"Error in _run_ai_loop: {e}")
+        logging.error(traceback.format_exc())
+
 

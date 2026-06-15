@@ -93,6 +93,7 @@ def _hf_discard(hand_14: list[str]) -> Optional[str]:
         out = pipe(
             prompt,
             max_new_tokens=6,
+            max_length=None,
             num_return_sequences=1,
             do_sample=True,
             temperature=0.8,

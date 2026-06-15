@@ -539,7 +539,12 @@ class GameManager:
         match = await db.get(Match, session.match_id)
         if match:
             match.result = result_enum
-            match.final_state = session.state.to_dict()
+            
+            # Embed the 'terminal' info inside final_state for history/outcome logic
+            fs = session.state.to_dict()
+            fs["terminal"] = terminal
+            match.final_state = fs
+            
             match.ended_at = datetime.now(timezone.utc)
 
         # ── ELO Updates ──
@@ -656,7 +661,7 @@ class GameManager:
                 try:
                     async with async_session() as bg_db:
                         await _try_match(t_game_type, bg_db)
-                except Exception as e:
+                except Exception:
                     pass
             asyncio.create_task(run_matchmaking(game_type))
 

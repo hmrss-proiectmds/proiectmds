@@ -85,6 +85,7 @@ def pick_hf_poker_move(engine: GameEngine, state: GameState) -> str:
         output = pipe(
             prompt,
             max_new_tokens=8,
+            max_length=None,
             num_return_sequences=1,
             do_sample=True,
             temperature=0.7,
