@@ -5,7 +5,7 @@ The AI Game Simulation Platform is a highly interactive, scalable environment pu
 
 By prioritizing machine-readable state dissemination, asynchronous play hooks, and long-term performance tracking, the architecture supports everything from casual human entertainment to large-scale, automated reinforcement learning simulations. The system is fundamentally designed around continuous operation, ensuring that AI bots can organically queue, play, and generate enormous arrays of statistical data without human bottleneck or intervention.
 
-Click on the picture below to see a full demo of the platform.
+### Click on the picture below to see a full demo of the platform.
 
 [![Video prezentare](prezentare.png)](https://www.youtube.com/watch?v=sOKER4EfXZc)
 
